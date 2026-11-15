@@ -34,16 +34,23 @@ Un publicador lee filas pendientes con locking seguro (`FOR UPDATE SKIP LOCKED` 
 
 ## Estados
 
-`ACCEPTED -> QUEUED -> PROCESSING -> SENT -> DELIVERED -> READ`
+Máquina de estados de tres niveles aprobada (PD-02); definición normativa en [ADR-0012](../adr/0012-delivery-semantics.md). Sustituye al flujo único anterior (`ACCEPTED → QUEUED → PROCESSING → SENT → DELIVERED → READ`).
 
-Ramas:
-- `PROCESSING -> RETRY_PENDING -> QUEUED`
-- `PROCESSING -> FAILED -> DEAD_LETTER`
-- `ACCEPTED/QUEUED/RETRY_PENDING -> CANCELLED`
+| Nivel | Valores | Uso en mensajería |
+|---|---|---|
+| Intento (`notification_attempts.result_code`) | `PROVIDER_ACCEPTED`, `TRANSIENT_FAILURE`, `PERMANENT_FAILURE`, `AMBIGUOUS` | Resultado de cada ejecución del consumidor contra el proveedor |
+| Entrega (`notification_deliveries.status`) | `PENDING`, `QUEUED`, `IN_PROGRESS`, `PROVIDER_ACCEPTED`, `RETRY_PENDING`, `RECONCILIATION_REQUIRED`, `DELIVERED`, `READ`, `FAILED`, `DEAD_LETTER`, `CANCELLED` | Estado técnico que gobiernan Outbox, consumidores, colas de retry y DLQ |
+| Público (`notifications.status`) | `ACCEPTED`, `QUEUED`, `PROCESSING`, `SENT`, `DELIVERED`, `READ`, `FAILED`, `CANCELLED` | Resumen derivado de la entrega que ve la API |
 
-> **Pendiente de aprobación ([PD-02](../project/PENDING-DECISIONS.md#pd-02-máquina-de-estados-de-notificación-entrega-e-intento)):** este flujo no contempla el resultado ambiguo (`UNKNOWN/RECONCILIATION_REQUIRED`) de `provider-contracts-v1.5.md`, ni separa los estados de notificación, entrega e intento. La propuesta de máquina de estados está en PD-02.
+Correspondencia con el flujo de colas:
 
-`SENT` significa que el proveedor aceptó la solicitud, no que el destinatario la recibió. `DELIVERED` y `READ` solo se establecen con evidencia del proveedor. No todos los canales/proveedores soportan todos los estados.
+- Outbox publicado → entrega `QUEUED`. El consumidor la toma → `IN_PROGRESS`.
+- `TRANSIENT_FAILURE` con intentos restantes → `RETRY_PENDING` y mensaje a `notification.retry` con backoff exponencial y jitter → `QUEUED` al vencer.
+- `PERMANENT_FAILURE` o intentos agotados → `FAILED`. Si el mensaje no es procesable o requiere intervención → `DEAD_LETTER` (`notification.dlx`).
+- `AMBIGUOUS` (timeout o caída después de enviar) → `RECONCILIATION_REQUIRED`: **no** se publica en la cola de retry ni se reenvía. La conciliación consulta al proveedor y lleva la entrega a `PROVIDER_ACCEPTED` o a `FAILED`. Mientras tanto, el estado público es `PROCESSING`.
+- Cada transición de entrega se registra en `delivery_status_history`.
+
+`SENT` (entrega `PROVIDER_ACCEPTED`) significa que el proveedor aceptó la solicitud, no que el destinatario la recibió. `DELIVERED` y `READ` solo se establecen con evidencia del proveedor. No todos los canales/proveedores los soportan.
 
 ## Garantías
 

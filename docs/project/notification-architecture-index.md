@@ -5,7 +5,7 @@
 - Arquitectura y estructura: `notification-service/docs/architecture/`
 - ADR: `notification-service/docs/adr/`
 - Datos y ERD: `notification-service/docs/data/erd.md`
-- API: `notification-service/docs/api/api-design.md`, `endpoint-inventory.md`, `openapi.yaml`
+- API: `notification-service/docs/api/api-design.md`, `endpoint-inventory.md`, `openapi.yaml`, `error-codes.md`
 - Seguridad: `notification-service/docs/security/security-model.md`, `rbac-matrix.md`
 - Mensajería: `notification-service/docs/messaging/rabbitmq-outbox.md`
 - Proveedores: `notification-service/docs/providers/provider-adapters.md`, `provider-contracts-v1.5.md`, `legacy-source-assessment.md`, `webhook-contract-readiness.md`, `risk-register.md`
@@ -24,10 +24,11 @@
 ## Decisiones y cambios
 
 - `DECISIONS-v1.5.md` (decisiones aprobadas)
-- `PENDING-DECISIONS.md` (propuestas **pendientes de aprobación**; no son decisiones)
+- `PENDING-DECISIONS.md` (registro histórico de PD-01 a PD-08, **todas aprobadas** el 2026-11-15)
 - `CHANGELOG-v1.5.md`
 
 ## Operación del repositorio
 
 - Saneamiento de la fundación: `notification-service/docs/operations/repository-sanitization-report.md`
 - Pendientes técnicos: `notification-service/docs/operations/technical-pending-register.md`
+- Cierre de decisiones PD-01 a PD-08: `notification-service/docs/operations/decision-closure-report.md`

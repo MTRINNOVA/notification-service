@@ -3,8 +3,8 @@
 ## 1. Identidad y multi-tenancy
 
 - Un usuario puede pertenecer a más de una organización y seleccionar el contexto activo.
-- Los roles se resuelven por membresía y no se comparten accidentalmente entre organizaciones.
-- `super_admin` puede operar globalmente; toda acción global queda auditada.
+- Los roles se resuelven por membresía y no se comparten accidentalmente entre organizaciones. Roles de organización v1: `organization_admin`, `operator`, `viewer` (no existen `org_admin` ni `application_admin`).
+- `super_admin` puede operar globalmente; toda acción global queda auditada. Se almacena en `platform_role_assignments`, independiente de las membresías; intentar asignarlo en una membresía devuelve `422 ROLE_NOT_ASSIGNABLE`. Su concesión y revocación se auditan.
 - Una API Key queda vinculada a una sola aplicación y, por transitividad, a una organización.
 - Una aplicación no puede consultar ni modificar recursos de otra organización, incluso manipulando UUIDs.
 - Las pruebas de integración verifican aislamiento para notificaciones, remitentes, proveedores, plantillas, campañas, adjuntos y auditoría.
@@ -25,10 +25,11 @@
 - El estado de conexión se obtiene de eventos autenticados y/o consulta al proveedor.
 - La sesión sobrevive a reinicios controlados de Evolution si la versión/almacenamiento fijados lo permiten; esto se prueba antes de producción.
 - Un remitente solo se asigna a aplicaciones de su organización.
-- La aplicación puede indicar `senderId`; si lo omite se usa el default activo; si no existe, se rechaza.
-- Un número desconectado no acepta nuevas entregas; se devuelve error de negocio estable.
-- La aceptación del proveedor no se interpreta como entrega confirmada.
-- Resultado ambiguo no genera reenvío ciego.
+- La aplicación puede indicar `senderId`; si lo omite se usa el default activo; si no existe, se rechaza con `422 DEFAULT_SENDER_NOT_CONFIGURED`.
+- Un número desconectado no acepta nuevas entregas; se devuelve `422 SENDER_NOT_CONNECTED`.
+- La aceptación del proveedor no se interpreta como entrega confirmada: la entrega queda en `PROVIDER_ACCEPTED` y el estado público en `SENT`.
+- Resultado ambiguo no genera reenvío ciego: el intento queda `AMBIGUOUS`, la entrega `RECONCILIATION_REQUIRED` y el estado público `PROCESSING` hasta conciliar.
+- `DELIVERED`/`READ` solo se registran con evidencia del proveedor; cada transición de entrega queda en `delivery_status_history`.
 
 ## 4. SMS y email
 
@@ -43,12 +44,14 @@
 - La creación de notificación es transaccional con reserva de cuota y Outbox.
 - `202 Accepted` solo se devuelve después de persistir la solicitud y su evento Outbox.
 - Repetición idempotente no crea una segunda notificación ni consume cuota adicional.
-- Misma idempotency key con request hash distinto produce `409`.
+- Misma idempotency key con request hash distinto produce `409 IDEMPOTENCY_KEY_CONFLICT`.
 - Cuota inicial WhatsApp: 500 mensajes aceptados por día y organización, agregada entre aplicaciones y números.
-- El día se calcula en `organizations.timezone`; el contador se actualiza atómicamente.
+- El día se calcula en `organizations.timezone` (no existe zona horaria por aplicación en v1); el contador se actualiza atómicamente.
 - Límites menores por aplicación no pueden exceder el límite efectivo de organización.
 - Validaciones fallidas no consumen cuota; aceptación sí; reintentos técnicos no vuelven a consumirla.
-- El exceso de cuota devuelve `429` y código estable.
+- El exceso de cuota devuelve `429` con `WHATSAPP_DAILY_QUOTA_EXCEEDED` (o `APPLICATION_DAILY_LIMIT_EXCEEDED`), `Retry-After` y `retryAt` cuando sean calculables.
+- Un límite de aplicación mayor que el de la organización se rechaza con `422 APPLICATION_LIMIT_EXCEEDS_ORGANIZATION_LIMIT`.
+- Todos los errores siguen RFC 9457 con `code` del catálogo [error-codes.md](../api/error-codes.md): `400` formato, `409` conflicto de estado/idempotencia, `422` regla de negocio.
 
 ## 6. Mensajería resiliente
 
@@ -71,7 +74,7 @@
 
 - Campaña valida audiencia, consentimiento, plantilla, remitente y cuota antes de iniciar.
 - Pausa/cancelación detiene nuevos despachos; no se promete cancelar mensajes ya aceptados por proveedor.
-- Programación convierte hora local a UTC al crear y conserva zona horaria/valor local para auditoría.
+- Programación interpreta la hora local en la zona horaria de la **organización**, la convierte a UTC al crear y conserva la zona horaria y el valor local para auditoría.
 - El scheduler es idempotente ante reinicios y múltiples réplicas.
 
 ## 9. Operación

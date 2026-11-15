@@ -125,7 +125,9 @@ Ninguna prueba usa servicios externos ni EF Core InMemory. No se eliminó ningun
 
 ## 5. Decisiones que requieren aprobación
 
-Detalle en [PENDING-DECISIONS.md](../project/PENDING-DECISIONS.md): PD-01 roles, PD-02 máquina de estados, PD-03 puertos de proveedores, PD-04 400/409/422, PD-05 `timezone_override`, PD-06 DNS, PD-07 imágenes Docker y PD-08 409/429 en OpenAPI. También requieren aprobación TP-02 (base de datos de pruebas), TP-05, TP-06 y TP-07 ([technical-pending-register.md](technical-pending-register.md)).
+*Situación al cerrar el saneamiento:* PD-01 a PD-08 quedaron pendientes de aprobación ([PENDING-DECISIONS.md](../project/PENDING-DECISIONS.md)), junto con TP-02, TP-05, TP-06 y TP-07.
+
+> **Actualización 2026-11-15:** el usuario **aprobó PD-01 a PD-08**, que ya están incorporadas a los ADR, el ERD, la matriz RBAC, OpenAPI y la documentación de despliegue. Detalle en [decision-closure-report.md](decision-closure-report.md). Siguen requiriendo aprobación TP-02, TP-05, TP-06, TP-07 y los puntos abiertos TP-15 a TP-20 ([technical-pending-register.md](technical-pending-register.md)).
 
 ## 6. Riesgos técnicos pendientes
 
@@ -170,3 +172,5 @@ docker info                                                           # falló: 
 2. **TP-02**: el mecanismo de PostgreSQL para las pruebas de integración de persistencia.
 
 Recomendado, aunque no bloqueante: construir las imágenes Docker (TP-01).
+
+> **Actualización 2026-11-15 (cierre de decisiones):** PD-01, PD-02 y PD-05 están aprobadas e incorporadas al ERD, que es ahora el modelo lógico aprobado para v1. Para autorizar la Fase 2 siguen pendientes **TP-02** (PostgreSQL de pruebas; recomendación: Testcontainers), **TP-18** (vínculo notificación–adjunto) y **TP-20** (roles personalizados), que afectan a tablas. Los resultados de build y pruebas de este informe no cambian: no se modificó código.

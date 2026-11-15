@@ -4,7 +4,7 @@
 
 - Traefik ya existe en el VPS y queda fuera del repositorio.
 - Compose de backend y Compose de Admin independientes.
-- Imágenes publicadas en GHCR con tags inmutables/semver y digest en producción.
+- Una imagen por host ([PD-07](../project/PENDING-DECISIONS.md#pd-07-estrategia-de-imágenes-docker), aprobada): `notification-api`, `notification-worker`, `notification-scheduler`, publicadas en GHCR (`ghcr.io/<owner>/notification-<host>`) con tags inmutables/semver y digest en producción.
 - PostgreSQL, RabbitMQ, Redis y MinIO no publican puertos al host en producción.
 - Persistencia mediante volúmenes/directorios dedicados.
 - Secretos fuera del repositorio; `.env.example` solo contiene nombres y valores ficticios.
@@ -30,9 +30,9 @@ Evolution y Postfix pueden tener Compose independiente. SMS Gateway normalmente 
 - `notification_providers`: Worker y proveedores autohospedados.
 - No declarar `notification_internal` como `internal: true` si contenedores de esa red necesitan salida a Internet. Para mayor aislamiento, crear red de datos interna y una red de egress separada.
 
-## Dominios (no confirmados)
+## Dominios (variables; DNS reales sin fijar)
 
-Los nombres DNS reales están pendientes ([PD-06](../project/PENDING-DECISIONS.md#pd-06-subdominios-y-dns)). Compose y labels de Traefik deben usar estas variables, nunca nombres fijos:
+Decisión aprobada ([PD-06](../project/PENDING-DECISIONS.md#pd-06-subdominios-y-dns)): Compose y labels de Traefik usan siempre estas variables, nunca nombres fijos. Los nombres DNS reales todavía no están fijados (dato de infraestructura). Traefik es el existente del VPS y no forma parte de este repositorio:
 
 | Variable | Destino |
 |---|---|
@@ -42,11 +42,13 @@ Los nombres DNS reales están pendientes ([PD-06](../project/PENDING-DECISIONS.m
 
 ## Imágenes
 
-Dockerfiles preparados por host (contexto de build: raíz del repositorio). La estrategia definitiva está pendiente ([PD-07](../project/PENDING-DECISIONS.md#pd-07-estrategia-de-imágenes-docker)):
+Decisión aprobada ([PD-07](../project/PENDING-DECISIONS.md#pd-07-estrategia-de-imágenes-docker)): **una imagen independiente por host**, cada una con su Dockerfile, su runtime y su despliegue (contexto de build: raíz del repositorio):
 
-- `src/NotificationService.Api/Dockerfile` (runtime `aspnet`, puerto 8080)
-- `src/NotificationService.Worker/Dockerfile` (runtime `runtime`)
-- `src/NotificationService.Scheduler/Dockerfile` (runtime `runtime`)
+| Imagen | Dockerfile | Runtime |
+|---|---|---|
+| `notification-api` | `src/NotificationService.Api/Dockerfile` | `aspnet` (puerto 8080) |
+| `notification-worker` | `src/NotificationService.Worker/Dockerfile` | `runtime` |
+| `notification-scheduler` | `src/NotificationService.Scheduler/Dockerfile` | `runtime` |
 
 Todos usan multi-stage con build en Release, SDK fijado a `global.json`, restore cacheable y usuario no-root (`$APP_UID`). No incluyen secretos: `.dockerignore` excluye `.env*`, `secrets.json`, `bin/`, `obj/`, `tests/` y `docs/`.
 

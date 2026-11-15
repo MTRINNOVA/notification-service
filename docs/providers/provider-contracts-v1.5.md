@@ -35,7 +35,7 @@ Este documento separa evidencia del ZIP `Notificaciones-master.zip`, decisiones 
 - Validar tenant al resolver webhook: `providerAccountId` debe mapear a una cuenta interna activa.
 - El evento externo se guarda antes de responder éxito; después se transforma a evento interno.
 - `data.key.id` prueba aceptación/identificación del mensaje en el proveedor, no entrega final.
-- Resultado de envío ambiguo se marca `UNKNOWN/RECONCILIATION_REQUIRED`; no reintentar ciegamente. (Nombre del estado y su encaje en la máquina de estados: pendiente, [PD-02](../project/PENDING-DECISIONS.md#pd-02-máquina-de-estados-de-notificación-entrega-e-intento).)
+- Resultado de envío ambiguo: el intento se registra como `AMBIGUOUS` y la entrega pasa a `RECONCILIATION_REQUIRED` (estado público `PROCESSING`); no reintentar ciegamente. Sustituye a la denominación anterior `UNKNOWN/RECONCILIATION_REQUIRED` ([ADR-0012](../adr/0012-delivery-semantics.md), PD-02 aprobada).
 
 ### Pruebas de aceptación
 
@@ -54,7 +54,7 @@ El ZIP declara `GATEWAY__PRIVATE_TOKEN` en Compose, pero el adaptador legado imp
 
 ## SMTP
 
-- Distinguir `SMTP_ACCEPTED` de `DELIVERED`; una respuesta SMTP positiva no demuestra bandeja de entrada ni lectura.
+- Distinguir la aceptación SMTP (intento `PROVIDER_ACCEPTED`, entrega `PROVIDER_ACCEPTED`, público `SENT`) de `DELIVERED`; una respuesta SMTP positiva no demuestra bandeja de entrada ni lectura.
 - Rebotes/DSN y tracking dependen del servidor y configuración; no asumir tracking de apertura/clic universal.
 - El perfil central Postfix y perfiles SMTP externos comparten el puerto interno de aplicación, pero no necesariamente capacidades idénticas.
 

@@ -42,7 +42,7 @@ Clean Architecture + Hexagonal (Ports and Adapters) — [ADR-0001](docs/adr/0001
 | Tema                      | Documento                                                                                                                                                                                                                                                                            |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Decisiones confirmadas    | [docs/project/DECISIONS-v1.5.md](docs/project/DECISIONS-v1.5.md), [docs/adr/](docs/adr/)                                                                                                                                                                                             |
-| Decisiones pendientes     | [docs/project/PENDING-DECISIONS.md](docs/project/PENDING-DECISIONS.md) (propuestas, **no** decisiones), [technical-pending-register.md](docs/operations/technical-pending-register.md)                                                                                                 |
+| Decisiones PD y pendientes | [PENDING-DECISIONS.md](docs/project/PENDING-DECISIONS.md) (historial de PD-01..PD-08, todas aprobadas), [technical-pending-register.md](docs/operations/technical-pending-register.md) (puntos abiertos), [error-codes.md](docs/api/error-codes.md)                                    |
 | Estructura y dependencias | [docs/architecture/project-structure.md](docs/architecture/project-structure.md), [hexagonal.md](docs/architecture/hexagonal.md), C4: [context](docs/architecture/c4-context.md), [containers](docs/architecture/c4-containers.md), [components](docs/architecture/c4-components.md) |
 | Datos                     | [docs/data/erd.md](docs/data/erd.md) (modelo lógico, requiere revisión antes de migraciones)                                                                                                                                                                                         |
 | API                       | [docs/api/openapi.yaml](docs/api/openapi.yaml) (contrato normativo), [api-design.md](docs/api/api-design.md), [endpoint-inventory.md](docs/api/endpoint-inventory.md)                                                                                                                |
@@ -137,7 +137,7 @@ Domain no puede depender de: EF Core, Npgsql, RabbitMQ.Client, StackExchange.Red
 
 ## 9. Multi-tenancy
 
-- Ámbitos: `Organization` → `Application`; usuarios en varias organizaciones vía membresías; roles/permisos por organización; `super_admin` de plataforma separado y siempre auditado.
+- Ámbitos: `Organization` → `Application`; usuarios en varias organizaciones vía membresías; roles de organización (`organization_admin`, `operator`, `viewer`) por membresía; `super_admin` como privilegio de plataforma en `platform_role_assignments`, separado y siempre auditado.
 - El `organization_id`/`application_id` efectivo **se deriva del principal autenticado** (API Key → aplicación → organización; JWT → membresía activa). Un ID en ruta, query o body nunca es fuente de autoridad.
 - Toda consulta y comando de negocio filtra por organización y, cuando aplique, aplicación. Recurso de otro tenant → `404` (no revelar existencia).
 - Remitentes: una aplicación puede tener varios; un remitente puede asignarse a varias aplicaciones **de la misma organización**; `senderId` explícito o el predeterminado de la aplicación; sin predeterminado válido → error de negocio documentado.
@@ -148,8 +148,9 @@ Domain no puede depender de: EF Core, Npgsql, RabbitMQ.Client, StackExchange.Red
 
 Contrato interno neutral; un adaptador por proveedor en `Infrastructure/Providers/`. Detalle: [provider-adapters.md](docs/providers/provider-adapters.md), [provider-contracts-v1.5.md](docs/providers/provider-contracts-v1.5.md).
 
+- **Puertos (PD-03):** especializados por canal en `Application/Abstractions/Providers/` ([hexagonal.md](docs/architecture/hexagonal.md)); resultado neutral `ProviderSendResult`; capacidades explícitas en `ProviderCapabilities`. Email y SMS no tienen operaciones de QR.
 - **WhatsApp — Evolution API v2.3.7:** puertos separados de envío (`IWhatsAppProvider`) y de conexión/QR (`IWhatsAppConnectionManager`); el dominio no conoce rutas, payloads ni estados de Evolution; una instancia por número y organización; nombre de instancia generado por el backend; QR efímero, nunca persistido ni en logs. Meta Cloud API: solo reservar el valor de proveedor; **no** crear endpoints, flujos ni adaptador en v1.
-- **Email — Postfix/SMTP y SMTP externo por organización:** credenciales cifradas fuera del dominio; `SMTP_ACCEPTED` ≠ `DELIVERED`.
+- **Email — Postfix/SMTP y SMTP externo por organización:** credenciales cifradas fuera del dominio; la aceptación SMTP (`PROVIDER_ACCEPTED` / público `SENT`) ≠ `DELIVERED`.
 - **SMS — Android SMS Gateway:** dispositivo/SIM por organización; versión, autenticación (Basic vs token privado) y callbacks **pendientes de validar**: no asumir el contrato legado.
 - **MinIO:** binarios en bucket privado; PostgreSQL guarda metadatos y checksum; validar tamaño, extensión y MIME real; URLs firmadas de corta duración; nunca exponer credenciales.
 - **Webhooks:** validar autenticidad → limitar tamaño → persistir con clave de deduplicación → responder rápido → procesar asíncrono; tolerar duplicados y desorden; resolver tenant desde `providerAccountId` interno. No implementar un webhook antes de cerrar su contrato ([webhook-contract-readiness.md](docs/providers/webhook-contract-readiness.md)).
@@ -223,7 +224,7 @@ Detalle en [rabbitmq-outbox.md](docs/messaging/rabbitmq-outbox.md).
 - `sealed` por defecto en clases no diseñadas para herencia; constructores primarios para DI cuando sea legible.
 - `async`/`await` de extremo a extremo; `CancellationToken` en toda operación de I/O; prohibido `.Result`, `.Wait()`, `GetAwaiter().GetResult()` y `Task.Run` para "hacer async" en ASP.NET Core.
 - Sin `catch` vacíos; no usar excepciones como flujo normal de negocio (usar resultados/errores tipados); excepciones solo para situaciones excepcionales.
-- Diferenciar errores de validación (`400`), dominio/negocio (`409`/`422` según contrato), autorización (`401`/`403`/`404`), cuota (`429`), infraestructura/proveedor (`503`) e inesperados (`500`).
+- Diferenciar errores de formato (`400`), conflicto de estado/idempotencia (`409`), regla de negocio (`422`), autorización (`401`/`403`/`404`), cuota (`429`), infraestructura/proveedor (`503`) e inesperados (`500`). Usar solo valores de `code` de [error-codes.md](docs/api/error-codes.md); un código nuevo requiere justificación y actualizar el catálogo y OpenAPI.
 - SOLID, KISS, YAGNI, DRY razonable; clases y métodos pequeños y cohesivos; sin Service Locator (`IServiceProvider` solo en composition roots/factories justificadas); sin abstracciones especulativas.
 - Inyección de dependencias por constructor; registro en `DependencyInjection.cs` de cada capa (`AddApplication`, `AddInfrastructure`).
 - Configuración mediante opciones tipadas y validadas; nombres de variables de entorno según [compose-topology.md](docs/deployment/compose-topology.md).
@@ -254,6 +255,7 @@ No ejecutar `dotnet ef migrations add` ni `dotnet ef database update` fuera de l
 
 ## 17. Despliegue
 
+- Una imagen por host (PD-07): `notification-api`, `notification-worker`, `notification-scheduler`, cada una con su Dockerfile; publicación en GHCR. Hosts de Traefik solo mediante `NOTIFICATIONS_*_HOST` (PD-06).
 - Compose del backend: API, Worker, Scheduler, PostgreSQL, RabbitMQ, Redis, MinIO. Evolution/Postfix pueden ir en Compose separado.
 - Traefik externo: conectar solo API (y Admin en su repo) a la red externa existente mediante labels; nombre real de la red pendiente de confirmar.
 - Datos sin puertos publicados al host en producción; imágenes por versión/digest (nunca `latest`); usuario no-root; healthchecks liveness/readiness; límites de recursos.
@@ -268,29 +270,31 @@ No ejecutar `dotnet ef migrations add` ni `dotnet ef database update` fuera de l
 6. No generar migraciones fuera de la fase autorizada.
 7. No declarar terminado algo incompleto; listar lo pendiente.
 8. Problema fuera de alcance: documentarlo, explicar impacto, proponer solución y **esperar autorización** antes de ampliar el alcance.
-9. No modificar el estado de un ADR ni resolver una decisión pendiente (§19) sin aprobación explícita.
+9. No modificar el estado de un ADR ni resolver un punto abierto (§19) sin aprobación explícita.
 10. Fase actual: fundación saneada; **Fase 2 (persistencia y modelo de datos) no autorizada**. No crear entidades, `DbSet`, configuraciones Fluent API, repositorios ni migraciones hasta que el usuario la autorice.
 
-## 19. Contradicciones y decisiones pendientes
+## 19. Decisiones aprobadas y puntos abiertos
 
-Las contradicciones conocidas y sus propuestas están en [docs/project/PENDING-DECISIONS.md](docs/project/PENDING-DECISIONS.md). Mientras un punto siga **Pendiente**:
+PD-01 a PD-08 fueron **aprobadas el 2026-11-15** y son reglas obligatorias de v1. El historial está en [PENDING-DECISIONS.md](docs/project/PENDING-DECISIONS.md) (solo contexto); la norma es el documento indicado en cada fila.
 
-- No implementar ninguna de sus alternativas, ni siquiera la recomendada.
-- No convertirlo en regla, código, migración, enum ni contrato OpenAPI.
-- Si una tarea depende de él, detener esa parte, informar y continuar con lo independiente.
-
-| ID | Tema | Bloquea Fase 2 |
+| ID | Regla vigente | Normativa |
 |---|---|---|
-| PD-01 | Roles (`organization_admin` vs `org_admin`, `application_admin`, almacenamiento de `super_admin`) | Sí |
-| PD-02 | Máquina de estados notificación/entrega/intento y resultado ambiguo | Sí |
-| PD-03 | Puertos de proveedores especializados vs `INotificationProvider` | No |
-| PD-04 | Uso de 400 / 409 / 422 | No |
-| PD-05 | `timezone_override` de aplicación | Sí (columna) |
-| PD-06 | Subdominios/DNS (usar `NOTIFICATIONS_*_HOST`) | No |
-| PD-07 | Estrategia de imágenes Docker | No |
-| PD-08 | 409/429 ausentes en `openapi.yaml` | No |
+| PD-01 | Roles v1: `super_admin` (privilegio de plataforma en `platform_role_assignments`, nunca en `membership_roles`), `organization_admin`, `operator`, `viewer`. No usar `org_admin` ni crear `application_admin` | [ADR-0011](docs/adr/0011-admin-identity.md), [rbac-matrix.md](docs/security/rbac-matrix.md) |
+| PD-02 | Tres niveles de estado: público (8 valores), entrega (11, incluido `RECONCILIATION_REQUIRED`) e intento (`PROVIDER_ACCEPTED`/`TRANSIENT_FAILURE`/`PERMANENT_FAILURE`/`AMBIGUOUS`). `RECONCILIATION_REQUIRED` nunca es público ni se reintenta automáticamente | [ADR-0012](docs/adr/0012-delivery-semantics.md) |
+| PD-03 | Puertos por canal: `IWhatsAppProvider`, `IWhatsAppConnectionManager`, `IEmailProvider`, `ISmsProvider` + `ProviderSendResult`, `ProviderCapabilities`, `IProviderWebhookVerifier`, `IProviderWebhookTranslator`. No existe `INotificationProvider` | [hexagonal.md](docs/architecture/hexagonal.md) |
+| PD-04 | `400` formato · `409` conflicto de estado/idempotencia · `422` regla de negocio · `429` cuota/rate limit; RFC 9457 con `code` del catálogo cerrado | [error-codes.md](docs/api/error-codes.md), [api-design.md](docs/api/api-design.md) |
+| PD-05 | Sin zona horaria por aplicación en v1; todo cálculo usa `organizations.timezone` | [erd.md](docs/data/erd.md) |
+| PD-06 | Hosts solo mediante `NOTIFICATIONS_API_HOST`, `NOTIFICATIONS_ADMIN_HOST`, `NOTIFICATIONS_WEBHOOKS_HOST`; Traefik externo | [docker.md](docs/deployment/docker.md) |
+| PD-07 | Una imagen por host: `notification-api`, `notification-worker`, `notification-scheduler` | [docker.md](docs/deployment/docker.md) |
+| PD-08 | Cada operación de `openapi.yaml` declara sus `409`/`422`/`429` reales con componentes reutilizables; no añadir respuestas indiscriminadamente | [openapi.yaml](docs/api/openapi.yaml) |
 
-Una decisión se considera aprobada solo cuando el usuario la aprueba explícitamente **y** se actualiza el documento fuente (ADR, ERD, OpenAPI...).
+Puntos abiertos (no resueltos por estas decisiones): ver TP-15 a TP-20 en [technical-pending-register.md](docs/operations/technical-pending-register.md). Mientras sigan abiertos:
+
+- No implementar ninguna alternativa, ni siquiera la recomendada.
+- No convertirlos en regla, código, migración, enum ni contrato OpenAPI.
+- Si una tarea depende de uno de ellos, detener esa parte, informar y continuar con lo independiente.
+
+Una decisión nueva se considera aprobada solo cuando el usuario la aprueba explícitamente **y** se actualiza el documento fuente (ADR, ERD, OpenAPI...).
 
 ## 20. Checklist antes de entregar cambios
 
@@ -302,6 +306,6 @@ Una decisión se considera aprobada solo cuando el usuario la aprueba explícita
 - [ ] OpenAPI y documentación actualizados si cambió el contrato.
 - [ ] Sin migraciones ni cambios de modelo no autorizados.
 - [ ] Paquetes coherentes y estables; cambios de versión documentados.
-- [ ] Ninguna decisión pendiente (§19) implementada ni asumida.
+- [ ] Decisiones PD-01..PD-08 respetadas; ningún punto abierto (§19) implementado ni asumido.
 - [ ] `dotnet restore`, `dotnet build -c Release` (0 errores, sin advertencias nuevas) y `dotnet test -c Release` ejecutados y en verde.
 - [ ] Informe con archivos modificados, comandos ejecutados con resultados reales y pendientes.

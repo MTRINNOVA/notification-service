@@ -15,8 +15,18 @@
 - `sender_id` es un identificador interno, opaco y validado contra `organization_id`, `application_id`, canal y permisos. El backend resuelve el proveedor y la instancia externa.
 - Una organización puede conectar varios números. Cada número/sesión se representa mediante un remitente interno y se puede asignar a una o varias aplicaciones de la misma organización según permisos explícitos.
 - No se permite compartir instancias, sesiones ni credenciales entre organizaciones. La unicidad del nombre de instancia debe contemplar el ámbito global de Evolution.
-- Mantener separados los puertos de envío (`IWhatsAppProvider`) y administración de conexión/QR (`IWhatsAppConnectionManager`). El dominio no debe conocer rutas ni DTOs de Evolution.
-- El modelo debe permitir capacidades declaradas por proveedor: texto, media, estado de conexión, webhooks/eventos y límites. No asumir que ambos proveedores futuros soportarán exactamente las mismas funciones.
+- Puertos especializados por canal (PD-03, aprobada; detalle en [hexagonal.md](../architecture/hexagonal.md#puertos-de-proveedores-decisión-aprobada-pd-03-2026-11-15)): envío WhatsApp (`IWhatsAppProvider`) separado de la administración de conexión/QR (`IWhatsAppConnectionManager`); `IEmailProvider` e `ISmsProvider` sin operaciones de QR. Todos devuelven el `ProviderSendResult` neutral (`PROVIDER_ACCEPTED`, `TRANSIENT_FAILURE`, `PERMANENT_FAILURE`, `AMBIGUOUS`). No existe contrato universal `INotificationProvider`. El dominio no debe conocer rutas ni DTOs de Evolution, SMTP o SMSGate.
+- Capacidades explícitas por proveedor (`ProviderCapabilities`): texto, media, estado de conexión, webhooks/eventos, evidencia de entrega, evidencia de lectura y límites. No asumir que ambos proveedores futuros soportarán exactamente las mismas funciones.
+
+### Capacidades de estado por proveedor (v1)
+
+| Proveedor | Aceptación (`SENT`) | Entrega final (`DELIVERED`) | Lectura (`READ`) |
+|---|---|---|---|
+| Evolution v2.3.7 | Sí (`data.key.id`) | Posible por webhook, **por validar** | Posible por webhook, **por validar** |
+| SMTP (Postfix/externo) | Sí (respuesta SMTP positiva) | No (solo rebotes/DSN si se configuran → `FAILED`) | No |
+| SMSGate | Sí (`id`) | Depende de dispositivo/operador, **por validar** | No |
+
+Un estado sin capacidad confirmada no se reporta. Los estados y su semántica están en [ADR-0012](../adr/0012-delivery-semantics.md).
 
 ## WhatsApp — Evolution API v2.3.7 (primera etapa)
 

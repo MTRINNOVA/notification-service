@@ -25,6 +25,8 @@ docs/
 deploy/        (previsto para Compose/manifiestos; aún no creado)
 ```
 
+Cada host (`Api`, `Worker`, `Scheduler`) tiene su Dockerfile y genera una imagen independiente: `notification-api`, `notification-worker` y `notification-scheduler` (PD-07, aprobada; ver [docker.md](../deployment/docker.md)).
+
 Archivos de raíz: `NotificationService.sln`, `global.json` (SDK), `Directory.Build.props` (propiedades comunes), `Directory.Packages.props` (versiones NuGet centralizadas), `.env.example`, `.dockerignore`.
 
 No existe `NotificationService.Scheduler.Tests`. Las pruebas de composición del Scheduler están temporalmente en `Architecture.Tests` (TP-06 en [technical-pending-register.md](../operations/technical-pending-register.md)).

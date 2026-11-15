@@ -81,7 +81,7 @@ Los errores no controlados se devuelven como `application/problem+json` (RFC 945
 
 ## Docker
 
-Un Dockerfile por host (multi-stage, Release, usuario no-root). Se construyen desde la raíz del repositorio:
+Una imagen independiente por host (decisión PD-07): `notification-api`, `notification-worker`, `notification-scheduler`. Multi-stage, Release, usuario no-root y SDK fijado por `global.json`; se publican en GHCR. Se construyen desde la raíz del repositorio:
 
 ```bash
 docker build -f src/NotificationService.Api/Dockerfile -t notification-api:dev .
@@ -94,5 +94,6 @@ Aún no hay Docker Compose. Traefik es externo y nunca forma parte de este repos
 ## Decisiones y pendientes
 
 - Decisiones aprobadas: [docs/adr/](docs/adr/), [DECISIONS-v1.5.md](docs/project/DECISIONS-v1.5.md).
-- Propuestas pendientes de aprobación: [PENDING-DECISIONS.md](docs/project/PENDING-DECISIONS.md).
+- Registro de las decisiones PD-01 a PD-08 (todas aprobadas el 2026-11-15): [PENDING-DECISIONS.md](docs/project/PENDING-DECISIONS.md); cierre: [decision-closure-report.md](docs/operations/decision-closure-report.md).
+- Catálogo de códigos de error de la API: [error-codes.md](docs/api/error-codes.md).
 - Pendientes técnicos: [technical-pending-register.md](docs/operations/technical-pending-register.md).

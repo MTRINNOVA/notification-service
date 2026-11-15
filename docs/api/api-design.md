@@ -10,9 +10,18 @@
 - API Keys de aplicaciones en `X-API-Key`; usuarios del panel con access JWT Bearer.
 - El contexto de organización se deriva de credenciales y membresía. Un `organizationId` en ruta/cuerpo nunca sustituye autorización.
 - Paginación `page`/`pageSize` en v1, máximo 100; orden estable por fecha e ID.
-- Errores RFC 9457 `application/problem+json`, con `code`, `traceId` y `errors` opcionales.
+- Errores RFC 9457 `application/problem+json` con `type`, `title`, `status`, `detail`, `instance`, `code` y `traceId`; `errors` y `retryAt` cuando correspondan. Valores de `code`: [error-codes.md](error-codes.md).
 - `202 Accepted` confirma persistencia/aceptación, no envío ni entrega.
 - Archivos mediante `multipart/form-data`; respuesta JSON con `attachmentId`.
+- Zona horaria: las aplicaciones heredan la de su organización; en v1 no existe zona horaria por aplicación (PD-05). Las horas locales de programación se interpretan en la zona de la organización y se almacenan en UTC.
+
+## Estado público de notificación
+
+`ACCEPTED`, `QUEUED`, `PROCESSING`, `SENT`, `DELIVERED`, `READ`, `FAILED`, `CANCELLED` (esquema `NotificationPublicStatus` en OpenAPI). Es un resumen derivado del estado de entrega ([ADR-0012](../adr/0012-delivery-semantics.md)):
+
+- `SENT` significa que el proveedor **aceptó** el mensaje, no que se entregó.
+- `DELIVERED` y `READ` solo aparecen si el proveedor ofrece esa evidencia; muchos canales nunca los alcanzan (por ejemplo, SMTP no confirma entrega ni lectura).
+- Mientras una entrega requiere conciliación por un resultado ambiguo, el estado público es `PROCESSING`. Los estados internos de entrega no se exponen.
 
 ## Seguridad por tipo de API
 
@@ -51,10 +60,10 @@ Campos: `channel` (`WHATSAPP`, `EMAIL`, `SMS`), `recipient`, `senderId` opcional
 
 Reglas:
 - Debe especificarse exactamente una modalidad de contenido: plantilla o contenido directo, sujeto a canal.
-- Para WhatsApp se resuelve `senderId` explícito o remitente default asignado a la aplicación.
-- El remitente debe estar activo y asignado a la aplicación.
-- La cuota WhatsApp se reserva en la transacción de aceptación.
-- Un mismo `Idempotency-Key` y mismo hash devuelve el recurso original; mismo key con request distinto produce `409`.
+- Para WhatsApp se resuelve `senderId` explícito o remitente default asignado a la aplicación; sin default válido → `422 DEFAULT_SENDER_NOT_CONFIGURED`.
+- El remitente debe estar activo y asignado a la aplicación (`422 SENDER_NOT_CONNECTED` / `422 SENDER_NOT_ASSIGNED_TO_APPLICATION`; un remitente de otra organización → `404`).
+- La cuota WhatsApp se reserva en la transacción de aceptación; al superarla → `429 WHATSAPP_DAILY_QUOTA_EXCEEDED` con `Retry-After` y `retryAt`.
+- Un mismo `Idempotency-Key` y mismo hash devuelve el recurso original; mismo key con request distinto produce `409 IDEMPOTENCY_KEY_CONFLICT`.
 
 ## Management API — panel administrativo
 
@@ -79,7 +88,7 @@ Base `/api/v1/management`.
 
 ## Platform API
 
-Las operaciones globales de `super_admin` deben estar separadas lógicamente del panel de organización y siempre auditadas. El conjunto inicial incluye gestión de organizaciones, catálogo de proveedores, límites globales, estado de plataforma y consulta de auditoría. No exponer endpoints globales a API Keys de aplicaciones.
+`super_admin` es un privilegio de plataforma (`platform_role_assignments`), no un rol de membresía ([ADR-0011](../adr/0011-admin-identity.md)). Las operaciones globales de `super_admin` deben estar separadas lógicamente del panel de organización y siempre auditadas. El conjunto inicial incluye gestión de organizaciones, catálogo de proveedores, límites globales, estado de plataforma y consulta de auditoría. No exponer endpoints globales a API Keys de aplicaciones.
 
 ## Webhook API
 
@@ -97,24 +106,31 @@ Los payloads externos son específicos de versión/proveedor. Validar autenticid
 - `201`: recurso creado.
 - `202`: trabajo aceptado para procesamiento asíncrono.
 - `204`: acción sin cuerpo solo para operaciones expresamente definidas.
-- `400`: validación/esquema inválido.
+Semántica aprobada (PD-04); catálogo de `code` en [error-codes.md](error-codes.md):
+
+- `400`: formato, sintaxis o estructura inválidos (esquema, campo requerido, tipo, cabecera obligatoria ausente).
 - `401`: credencial ausente o inválida.
 - `403`: autenticado sin permiso.
 - `404`: recurso inexistente o fuera del ámbito visible.
-- `409`: conflicto de estado o idempotencia.
-- `413`: archivo demasiado grande.
-- `415`: tipo de contenido no permitido.
-- `422`: regla de negocio no satisfecha, si se adopta distinto de `400` para validación semántica. **Pendiente de aprobación:** [PD-04](../project/PENDING-DECISIONS.md#pd-04-uso-de-400-409-y-422). Además, `openapi.yaml` aún no declara `409` ni `429` ([PD-08](../project/PENDING-DECISIONS.md#pd-08-respuestas-409-y-429-ausentes-en-openapiyaml)).
-- `429`: cuota/rate limit excedido; incluir `Retry-After` cuando sea calculable.
-- `500`: error inesperado; `503`: dependencia temporalmente no disponible.
+- `409`: conflicto de estado del recurso o de idempotencia.
+- `413`: archivo o cuerpo demasiado grande.
+- `415`: tipo de contenido no soportado.
+- `422`: solicitud bien formada que incumple una regla de negocio.
+- `429`: cuota o rate limit excedido; incluir `Retry-After` cuando sea calculable.
+- `500`: error inesperado (posible en cualquier operación; no se declara una por una en OpenAPI).
+- `503`: dependencia temporalmente no disponible; incluir `Retry-After` cuando sea calculable.
+
+En `openapi.yaml`, cada operación declara solo las respuestas que corresponden a su comportamiento (PD-08); las respuestas reutilizables están en `components.responses`.
+
+**Rate limiting (`429`):** se aplica a la Public API (límite de solicitudes por minuto por organización/aplicación según [quotas-retention.md](../operations/quotas-retention.md)) y a las operaciones de la Management API que consumen cuota (inicio de campaña). No hay rate limiting documentado para el resto de la Management API ni para la autenticación; si se añade, debe declararse en OpenAPI.
 
 ## Respuestas de error
 
-Usar RFC 9457 Problem Details con extensiones:
+Usar RFC 9457 Problem Details con extensiones (formato completo en [error-codes.md](error-codes.md); `{PROBLEM_TYPE_BASE_URI}` se fijará con el DNS definitivo):
 
 ```json
 {
-  "type": "https://docs.example.com/problems/quota-exceeded",
+  "type": "{PROBLEM_TYPE_BASE_URI}/whatsapp-daily-quota-exceeded",
   "title": "Quota exceeded",
   "status": 429,
   "detail": "La organización alcanzó su cuota diaria de WhatsApp.",

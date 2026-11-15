@@ -41,30 +41,39 @@ Implementaciones de persistencia, mensajería, caché, almacenamiento, cifrado y
 - `IMessagePublisher`
 - `IObjectStorage`
 - `ISecretProtector`
-- `INotificationProvider`
-- `IProviderConnectionManager`
-- `IProviderWebhookVerifier`
+- Puertos de proveedores por canal (ver la sección siguiente)
 - `IIdempotencyStore`
 - `IClock`
 
-## Contrato de proveedor
+## Puertos de proveedores (decisión aprobada PD-03, 2026-11-15)
 
-> **Pendiente de aprobación ([PD-03](../project/PENDING-DECISIONS.md#pd-03-puertos-de-proveedores)):** se propone sustituir el contrato común siguiente por puertos especializados por canal (`IWhatsAppProvider`, `IWhatsAppConnectionManager`, `IEmailProvider`, `ISmsProvider`) más interfaces opcionales de capacidad, en línea con ADR-0004. Hasta su aprobación no se implementa ningún adaptador.
+Se usan **puertos especializados por canal**, sin contrato universal. Esta sección sustituye al contrato común `INotificationProvider` (`ProviderCode`, `Channel`, `Capabilities`, `SendAsync`, `TestConnectionAsync`, `GetHealthAsync`) y al puerto genérico `IProviderConnectionManager` de la versión anterior de este documento. Ambos quedan **retirados** y no deben implementarse. Historial: [PENDING-DECISIONS.md, PD-03](../project/PENDING-DECISIONS.md#pd-03-puertos-de-proveedores).
 
-Todo adaptador implementa un contrato común para enviar y, cuando proceda, administrar conexión:
+Ubicación prevista (aún no implementada): `NotificationService.Application/Abstractions/Providers/`.
 
-- `ProviderCode`
-- `Channel`
-- `Capabilities`
-- `SendAsync`
-- `TestConnectionAsync`
-- `GetHealthAsync`
+| Grupo | Puerto / tipo | Responsabilidad |
+|---|---|---|
+| WhatsApp | `IWhatsAppProvider` | Envío de texto y media → `ProviderSendResult` |
+| WhatsApp | `IWhatsAppConnectionManager` | Crear/eliminar instancia, obtener QR efímero, consultar estado, desconectar/reconectar |
+| Email | `IEmailProvider` | Envío de correo → `ProviderSendResult`. Postfix y SMTP externo comparten el puerto con perfiles distintos |
+| SMS | `ISmsProvider` | Envío de SMS → `ProviderSendResult` |
+| Común | `ProviderSendResult` | Resultado neutral del intento: `PROVIDER_ACCEPTED`, `TRANSIENT_FAILURE`, `PERMANENT_FAILURE` o `AMBIGUOUS`, más `providerMessageId`, `errorCode` y `retryAfter` opcionales (semántica en [ADR-0012](../adr/0012-delivery-semantics.md)) |
+| Común | `ProviderCapabilities` | Capacidades explícitas por proveedor: texto, media, conexión por QR, evidencia de entrega, evidencia de lectura, webhooks |
+| Común | `IProviderWebhookVerifier` | Verificar la autenticidad del webhook para una cuenta de proveedor |
+| Común | `IProviderWebhookTranslator` | Traducir el payload ya validado a eventos internos canónicos |
 
-La administración de sesiones/QR de WhatsApp debe residir en un puerto específico (`IWhatsAppConnectionManager`) o capacidad equivalente; no se debe forzar a proveedores Email/SMS a implementar operaciones de QR.
+Reglas:
+
+1. Solo WhatsApp tiene operaciones de conexión/QR. Email y SMS **no** implementan operaciones de QR.
+2. Los DTO, rutas y excepciones de Evolution, SMTP y SMSGate permanecen en Infrastructure y se traducen dentro del adaptador.
+3. Application define los puertos y las reglas de resolución (qué cuenta y qué remitente usar). Infrastructure implementa los adaptadores.
+4. Las capacidades de cada proveedor se declaran explícitamente. Nunca se asume `DELIVERED` o `READ` si la capacidad no existe.
+
+**Abierto (no resuelto por PD-03):** la API de administración incluye `POST /providers/accounts/{id}/test` y `GET /providers/accounts/{id}/health`, pero los puertos aprobados no indican qué puerto atiende esas operaciones. Ver TP-17 en [technical-pending-register.md](../operations/technical-pending-register.md). No implementar hasta que se apruebe.
 
 ## Selección de adaptador
 
-Un `ProviderResolver` resuelve el adaptador según `ProviderAccount.ProviderDefinition` y canal. La selección de cuenta y la política de enrutamiento pertenecen a Application. La llamada HTTP/SMTP concreta pertenece a Infrastructure.
+Un resolvedor por canal elige el adaptador según `provider_definitions.adapter_key` de la cuenta de proveedor. La selección de cuenta, de remitente y la política de enrutamiento pertenecen a Application. La llamada HTTP/SMTP concreta pertenece a Infrastructure.
 
 ## CQRS
 

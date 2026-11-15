@@ -10,7 +10,7 @@
 
 ## Consecuencias
 
-1. Definir un puerto de aplicación neutral, por ejemplo `IWhatsAppProvider`, para envío y consulta de capacidades/estado, y un puerto administrativo separado para crear/eliminar instancias, obtener QR y consultar conexión.
+1. Definir un puerto de aplicación neutral, por ejemplo `IWhatsAppProvider`, para envío y consulta de capacidades/estado, y un puerto administrativo separado para crear/eliminar instancias, obtener QR y consultar conexión. **Concretado el 2026-11-15 (PD-03, aprobada):** los puertos son `IWhatsAppProvider` (envío) e `IWhatsAppConnectionManager` (instancias/QR/estado), dentro del esquema de puertos especializados por canal de [hexagonal.md](../architecture/hexagonal.md#puertos-de-proveedores-decisión-aprobada-pd-03-2026-11-15). Email (`IEmailProvider`) y SMS (`ISmsProvider`) tienen sus propios puertos sin operaciones de QR. El contrato universal `INotificationProvider` queda retirado.
 2. Implementar `EvolutionWhatsAppProvider` detrás de esos puertos. La lógica de negocio no debe depender de nombres de rutas, payloads ni estados exclusivos de Evolution.
 3. Identificar cada remitente mediante un ID interno estable (`sender_id`). La instancia externa y el número asociado son atributos del registro, no identificadores que el cliente consumidor pueda manipular libremente.
 4. Mantener `provider_account`/conexión, instancia y sender como conceptos separados. Una organización puede tener varias conexiones y números; una aplicación solo puede utilizar los remitentes que tenga asignados.

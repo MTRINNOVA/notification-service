@@ -19,14 +19,14 @@ La capacidad confirmada es una línea base inicial compartida, no una asignació
 - Ejecutar pruebas de carga con el mix real de canales antes de fijar concurrencia.
 - El volumen de referencia es hasta 500 mensajes WhatsApp diarios por organización. El agregado de la plataforma depende del número de clientes; dimensionar disco según adjuntos, payloads, logs, retención y pruebas de carga.
 
-## Subdominios propuestos (no confirmados)
+## Subdominios (variables; DNS reales sin fijar)
 
-Usar variables de configuración hasta que se defina el DNS real ([PD-06](../project/PENDING-DECISIONS.md#pd-06-subdominios-y-dns)):
+Decisión aprobada ([PD-06](../project/PENDING-DECISIONS.md#pd-06-subdominios-y-dns)): usar siempre variables de configuración; los nombres DNS reales todavía no están fijados:
 
 - `NOTIFICATIONS_API_HOST`: API pública y de administración según autorización.
 - `NOTIFICATIONS_ADMIN_HOST`: panel administrativo.
 - `NOTIFICATIONS_WEBHOOKS_HOST`: recepción de callbacks.
-- Los nombres concretos (por ejemplo `notifications-api.<dominio>` o `api-notifications.<dominio>`) siguen pendientes de confirmación.
+- No se fijan nombres concretos en la documentación ni en los Compose; se definirán con el dominio raíz (dato de infraestructura).
 - No publicar MinIO directamente. Para descargas, usar URLs firmadas de corta duración o un endpoint controlado.
 
 ## Redes Docker

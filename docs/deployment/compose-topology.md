@@ -39,7 +39,10 @@ Implementadas en el código actual (ver [.env.example](../../.env.example)):
 - `ASPNETCORE_ENVIRONMENT` (API) / `DOTNET_ENVIRONMENT` (Worker, Scheduler)
 - `ConnectionStrings__DefaultConnection`: **única** convención para PostgreSQL en Api, Worker y Scheduler (`ConnectionStrings:DefaultConnection` en configuración jerárquica). Se valida al arrancar; sin ella el host no inicia.
 - `OpenApi__Enabled`: expone OpenAPI/Swagger UI fuera de Development (por defecto `false`).
-- `NOTIFICATIONS_API_HOST`, `NOTIFICATIONS_ADMIN_HOST`, `NOTIFICATIONS_WEBHOOKS_HOST`: hosts para labels de Traefik (PD-06).
+
+Variables de despliegue (las lee el Compose para las labels de Traefik, no la aplicación; PD-06 aprobada):
+
+- `NOTIFICATIONS_API_HOST`, `NOTIFICATIONS_ADMIN_HOST`, `NOTIFICATIONS_WEBHOOKS_HOST`.
 
 Previstas para fases posteriores (no implementadas):
 
@@ -71,7 +74,7 @@ Credenciales se inyectan desde secretos de Docker/Portainer o secret manager. No
 ## Notas
 
 - En producción fijar imágenes por versión/digest, no `latest`.
-- API y Worker pueden compartir la misma imagen con entrypoints distintos o imágenes separadas; elegir una estrategia de build. Hay Dockerfiles por host preparados; la decisión está pendiente ([PD-07](../project/PENDING-DECISIONS.md#pd-07-estrategia-de-imágenes-docker)).
+- Una imagen por host ([PD-07](../project/PENDING-DECISIONS.md#pd-07-estrategia-de-imágenes-docker), aprobada): `notification-api`, `notification-worker` y `notification-scheduler`, cada una con su Dockerfile y su servicio en el Compose.
 - No ejecutar migraciones EF automáticamente en cada réplica.
 - Healthcheck de API: `GET /health/live` (liveness, solo el proceso) y `GET /health/ready` (readiness; incluirá cada dependencia cuando tenga una comprobación real). Worker/Scheduler: mecanismo pendiente (TP-05 en [technical-pending-register.md](../operations/technical-pending-register.md)).
 - Proteger consola de RabbitMQ y MinIO; no exponerlas públicamente.

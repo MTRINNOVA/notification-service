@@ -1,25 +1,29 @@
-# Decisiones pendientes de aprobación
+# Registro de decisiones PD-01 a PD-08
 
-**Estado del documento:** propuestas. **Nada de este documento es una decisión aprobada** ni modifica los ADR ni `DECISIONS-v1.5.md`. Cada punto se resuelve cuando el responsable del producto lo aprueba; entonces se actualizan el documento fuente afectado (ADR, ERD, OpenAPI, etc.) y este registro.
+**Estado del documento:** registro histórico. **Las ocho decisiones fueron aprobadas expresamente por el usuario el 2026-11-15** y ya están incorporadas a sus documentos normativos (ADR, ERD, RBAC, OpenAPI, despliegue). Ver el resumen en [DECISIONS-v1.5.md](DECISIONS-v1.5.md#decisiones-de-cierre-pd-01-a-pd-08-aprobadas-el-2026-11-15) y el [informe de cierre](../operations/decision-closure-report.md).
+
+Se conservan el problema, el análisis y las alternativas de cada punto como contexto. **La fuente normativa vigente es el documento indicado en cada decisión, no este registro.**
 
 Origen: saneamiento del repositorio del 2026-11-15 ([repository-sanitization-report.md](../operations/repository-sanitization-report.md)).
 
-| ID | Tema | Estado | Bloquea Fase 2 |
+| ID | Tema | Estado | Decisión vigente en |
 |---|---|---|---|
-| [PD-01](#pd-01-nomenclatura-y-alcance-de-roles) | Nomenclatura y alcance de roles | Pendiente | Sí (seed de roles, `membership_roles`, almacenamiento de `super_admin`) |
-| [PD-02](#pd-02-máquina-de-estados-de-notificación-entrega-e-intento) | Máquina de estados | Pendiente | Sí (columnas/enum de estado y restricciones) |
-| [PD-03](#pd-03-puertos-de-proveedores) | Puertos de proveedores | Pendiente | No (afecta fases de adaptadores) |
-| [PD-04](#pd-04-uso-de-400-409-y-422) | Uso de 400 / 409 / 422 | Pendiente | No (afecta API y OpenAPI) |
-| [PD-05](#pd-05-timezone_override-de-aplicación) | `timezone_override` de aplicación | Pendiente | Sí (columna en `applications`) |
-| [PD-06](#pd-06-subdominios-y-dns) | Subdominios y DNS | Pendiente (datos de infraestructura) | No |
-| [PD-07](#pd-07-estrategia-de-imágenes-docker) | Estrategia de imágenes Docker | Pendiente | No |
-| [PD-08](#pd-08-respuestas-409-y-429-ausentes-en-openapiyaml) | Respuestas 409/429 ausentes en `openapi.yaml` | Pendiente | No |
+| [PD-01](#pd-01-nomenclatura-y-alcance-de-roles) | Nomenclatura y alcance de roles | **Aprobada** (2026-11-15) | [ADR-0011](../adr/0011-admin-identity.md), [rbac-matrix.md](../security/rbac-matrix.md), [erd.md](../data/erd.md) |
+| [PD-02](#pd-02-máquina-de-estados-de-notificación-entrega-e-intento) | Máquina de estados | **Aprobada** (2026-11-15) | [ADR-0012](../adr/0012-delivery-semantics.md), [erd.md](../data/erd.md) |
+| [PD-03](#pd-03-puertos-de-proveedores) | Puertos de proveedores | **Aprobada** (2026-11-15) | [hexagonal.md](../architecture/hexagonal.md), [ADR-0004](../adr/0004-whatsapp-adapters.md) |
+| [PD-04](#pd-04-uso-de-400-409-y-422) | Uso de 400 / 409 / 422 | **Aprobada** (2026-11-15) | [api-design.md](../api/api-design.md), [error-codes.md](../api/error-codes.md) |
+| [PD-05](#pd-05-timezone_override-de-aplicación) | `timezone_override` de aplicación | **Aprobada** (2026-11-15) | [erd.md](../data/erd.md), [DECISIONS-v1.5.md](DECISIONS-v1.5.md) |
+| [PD-06](#pd-06-subdominios-y-dns) | Subdominios y DNS | **Aprobada** (2026-11-15) | [docker.md](../deployment/docker.md) |
+| [PD-07](#pd-07-estrategia-de-imágenes-docker) | Estrategia de imágenes Docker | **Aprobada** (2026-11-15) | [docker.md](../deployment/docker.md) |
+| [PD-08](#pd-08-respuestas-409-y-429-ausentes-en-openapiyaml) | Respuestas 409/429 ausentes en `openapi.yaml` | **Aprobada** (2026-11-15) | [openapi.yaml](../api/openapi.yaml) |
 
 Resuelto durante el saneamiento (no requiere decisión adicional): **cadena de conexión** → `ConnectionStrings:DefaultConnection` / `ConnectionStrings__DefaultConnection`, la convención que ya documentaba [compose-topology.md](../deployment/compose-topology.md) y la preferencia indicada por el usuario.
 
 ---
 
 ## PD-01. Nomenclatura y alcance de roles
+
+> **Aprobada el 2026-11-15:** alternativa A. Roles v1: `super_admin` (privilegio de plataforma en `platform_role_assignments`), `organization_admin`, `operator`, `viewer`. `org_admin` se retira sin alias; `application_admin` no forma parte de v1.
 
 ### Problema
 
@@ -61,6 +65,8 @@ Define los datos iniciales de `roles` y `permissions`, si `membership_roles` lle
 ---
 
 ## PD-02. Máquina de estados de notificación, entrega e intento
+
+> **Aprobada el 2026-11-15:** alternativa A, con un ajuste respecto a la propuesta: el estado público **no** incluye `SCHEDULED` (valores finales: `ACCEPTED`, `QUEUED`, `PROCESSING`, `SENT`, `DELIVERED`, `READ`, `FAILED`, `CANCELLED`). Se añade el historial `delivery_status_history`. Normativa vigente: [ADR-0012](../adr/0012-delivery-semantics.md).
 
 ### Problema
 
@@ -132,7 +138,7 @@ stateDiagram-v2
 
 ### Recomendación
 
-**A.** Separa responsabilidades sin sobreingeniería, cumple ADR-0012 y no promete entregas que el proveedor no confirma. La alternativa B es razonable si el producto prefiere transparencia total. **Nombres finales, valores y plazo de conciliación: pendientes de aprobación.**
+**A.** Separa responsabilidades sin sobreingeniería, cumple ADR-0012 y no promete entregas que el proveedor no confirma. La alternativa B es razonable si el producto prefiere transparencia total. *(Texto histórico: nombres y valores quedaron fijados en la aprobación; el plazo de conciliación se fijará al validar cada proveedor.)*
 
 ### Impacto en la Fase 2
 
@@ -141,6 +147,8 @@ Define tipos y restricciones `CHECK` de `notifications.status`, `notification_de
 ---
 
 ## PD-03. Puertos de proveedores
+
+> **Aprobada el 2026-11-15:** alternativa A. La lista aprobada no incluye `IProviderConnectionTester`; las operaciones de prueba y salud de cuentas quedan abiertas en TP-17. Normativa vigente: [hexagonal.md](../architecture/hexagonal.md#puertos-de-proveedores-decisión-aprobada-pd-03-2026-11-15).
 
 ### Problema
 
@@ -182,6 +190,8 @@ Ninguno directo: afecta a las fases de adaptadores. Los contratos deben fijarse 
 
 ## PD-04. Uso de 400, 409 y 422
 
+> **Aprobada el 2026-11-15:** alternativa B (`400` formato, `409` conflicto, `422` regla de negocio), con el catálogo cerrado [error-codes.md](../api/error-codes.md).
+
 ### Problema
 
 [api-design.md](../api/api-design.md) lista `422` "si se adopta distinto de `400` para validación semántica". Los criterios de aceptación exigen "errores de negocio estables" (remitente desconectado, sin remitente predeterminado). `openapi.yaml` no declara `422` en ninguna operación.
@@ -205,6 +215,8 @@ Ninguno en persistencia. Debe resolverse antes de implementar el primer endpoint
 ---
 
 ## PD-05. `timezone_override` de aplicación
+
+> **Aprobada el 2026-11-15:** alternativa A. No existe `applications.timezone_override` en v1. Una futura zona horaria por aplicación solo podría afectar a la interpretación y presentación de programaciones, nunca a la cuota agregada de la organización.
 
 ### Reglas aprobadas (no cambian)
 
@@ -232,16 +244,22 @@ Determina si se crea `applications.timezone_override`. **Bloqueante menor para l
 
 ## PD-06. Subdominios y DNS
 
-Las propuestas de [docker.md](../deployment/docker.md) (`api-notifications.<dominio>`…) y [environment-decisions.md](../deployment/environment-decisions.md) (`notifications-api.<dominio>`…) diferían. Ninguna está confirmada. La documentación se unificó con variables (`NOTIFICATIONS_API_HOST`, `NOTIFICATIONS_ADMIN_HOST`, `NOTIFICATIONS_WEBHOOKS_HOST`). **Pendiente:** nombres DNS reales, dominio raíz y si los webhooks usan un subdominio propio. `openapi.yaml` conserva su URL de ejemplo (`notifications-api.example.com`), marcada como propuesta.
+> **Aprobada el 2026-11-15:** se mantienen las variables `NOTIFICATIONS_API_HOST`, `NOTIFICATIONS_ADMIN_HOST` y `NOTIFICATIONS_WEBHOOKS_HOST`. Los nombres DNS reales siguen sin fijar (dato de infraestructura, no decisión abierta). Traefik sigue siendo externo.
+
+Las propuestas de [docker.md](../deployment/docker.md) (`api-notifications.<dominio>`…) y [environment-decisions.md](../deployment/environment-decisions.md) (`notifications-api.<dominio>`…) diferían. Ninguna está confirmada. La documentación se unificó con variables (`NOTIFICATIONS_API_HOST`, `NOTIFICATIONS_ADMIN_HOST`, `NOTIFICATIONS_WEBHOOKS_HOST`). *(Histórico; sigue sin fijarse, como dato de infraestructura:)* nombres DNS reales, dominio raíz y si los webhooks usan un subdominio propio. `openapi.yaml` conserva su URL de ejemplo (`notifications-api.example.com`), marcada como propuesta.
 
 ---
 
 ## PD-07. Estrategia de imágenes Docker
 
-[compose-topology.md](../deployment/compose-topology.md) deja abierto si API y Worker comparten imagen. Se han **preparado** (sin decidir) Dockerfiles independientes por host: `src/NotificationService.{Api,Worker,Scheduler}/Dockerfile`. **Recomendación:** una imagen por host. Cada una lleva solo su runtime (`aspnet` para la API, `runtime` para Worker y Scheduler), escala por separado y tiene una superficie menor. **Pendiente de aprobación** junto con el nombrado en GHCR.
+> **Aprobada el 2026-11-15:** una imagen por host (`notification-api`, `notification-worker`, `notification-scheduler`), publicadas en GHCR.
+
+[compose-topology.md](../deployment/compose-topology.md) deja abierto si API y Worker comparten imagen. Se han **preparado** (sin decidir) Dockerfiles independientes por host: `src/NotificationService.{Api,Worker,Scheduler}/Dockerfile`. **Recomendación:** una imagen por host. Cada una lleva solo su runtime (`aspnet` para la API, `runtime` para Worker y Scheduler), escala por separado y tiene una superficie menor. *(Texto histórico: aprobada el 2026-11-15, ver arriba.)*
 
 ---
 
 ## PD-08. Respuestas 409 y 429 ausentes en `openapi.yaml`
+
+> **Aprobada el 2026-11-15:** `openapi.yaml` declara `409`, `422` y `429` (y `413`/`415`/`503` donde corresponde) por operación, según su comportamiento, con componentes RFC 9457 reutilizables.
 
 [api-design.md](../api/api-design.md) y los [criterios de aceptación](../acceptance/criteria.md) exigen `409` (idempotencia o estado) y `429` (cuota/rate limit con `Retry-After`). Las 93 operaciones de `openapi.yaml` solo declaran `400`, `401`, `403` y `404`. **Recomendación:** antes del primer endpoint funcional, añadir al contrato `409` y `429` (y `422` si se aprueba PD-04) en las operaciones que corresponda, mediante una revisión del contrato. **No se ha modificado OpenAPI.**
