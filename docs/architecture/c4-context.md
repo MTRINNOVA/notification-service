@@ -6,14 +6,14 @@
 
 ## Actores y sistemas externos
 
-| Actor/sistema | Interacción |
-|---|---|
-| Aplicación consumidora | Solicita envíos, consulta estados y adjunta archivos mediante REST/JSON |
+| Actor/sistema               | Interacción                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------- |
+| Aplicación consumidora      | Solicita envíos, consulta estados y adjunta archivos mediante REST/JSON                     |
 | Administrador de plataforma | Gestiona organizaciones, aplicaciones, proveedores, plantillas y campañas mediante el panel |
-| Evolution API | Motor autohospedado para WhatsApp Web/Baileys; conexión y eventos por API/webhook |
-| Postfix/SMTP | Transporte de correo autohospedado |
-| Android SMS Gateway | Puerta de enlace SMS conectada a dispositivo/SIM |
-| Traefik | Proxy inverso y terminación TLS ya existente en el VPS |
+| Evolution API               | Motor autohospedado para WhatsApp Web/Baileys; conexión y eventos por API/webhook           |
+| Postfix/SMTP                | Transporte de correo autohospedado                                                          |
+| Android SMS Gateway         | Puerta de enlace SMS conectada a dispositivo/SIM                                            |
+| Traefik                     | Proxy inverso y terminación TLS ya existente en el VPS                                      |
 
 ## Diagrama
 

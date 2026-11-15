@@ -34,21 +34,21 @@ Evolution y Postfix pueden tener Compose independiente. SMS Gateway normalmente 
 
 Decisión aprobada ([PD-06](../project/PENDING-DECISIONS.md#pd-06-subdominios-y-dns)): Compose y labels de Traefik usan siempre estas variables, nunca nombres fijos. Los nombres DNS reales todavía no están fijados (dato de infraestructura). Traefik es el existente del VPS y no forma parte de este repositorio:
 
-| Variable | Destino |
-|---|---|
-| `NOTIFICATIONS_API_HOST` | API pública y de administración |
-| `NOTIFICATIONS_ADMIN_HOST` | Panel administrativo (repositorio `notification-admin`) |
+| Variable                      | Destino                                                               |
+| ----------------------------- | --------------------------------------------------------------------- |
+| `NOTIFICATIONS_API_HOST`      | API pública y de administración                                       |
+| `NOTIFICATIONS_ADMIN_HOST`    | Panel administrativo (repositorio `notification-admin`)               |
 | `NOTIFICATIONS_WEBHOOKS_HOST` | Recepción de webhooks (puede apuntar a la API con un router separado) |
 
 ## Imágenes
 
 Decisión aprobada ([PD-07](../project/PENDING-DECISIONS.md#pd-07-estrategia-de-imágenes-docker)): **una imagen independiente por host**, cada una con su Dockerfile, su runtime y su despliegue (contexto de build: raíz del repositorio):
 
-| Imagen | Dockerfile | Runtime |
-|---|---|---|
-| `notification-api` | `src/NotificationService.Api/Dockerfile` | `aspnet` (puerto 8080) |
-| `notification-worker` | `src/NotificationService.Worker/Dockerfile` | `runtime` |
-| `notification-scheduler` | `src/NotificationService.Scheduler/Dockerfile` | `runtime` |
+| Imagen                   | Dockerfile                                     | Runtime                |
+| ------------------------ | ---------------------------------------------- | ---------------------- |
+| `notification-api`       | `src/NotificationService.Api/Dockerfile`       | `aspnet` (puerto 8080) |
+| `notification-worker`    | `src/NotificationService.Worker/Dockerfile`    | `runtime`              |
+| `notification-scheduler` | `src/NotificationService.Scheduler/Dockerfile` | `runtime`              |
 
 Todos usan multi-stage con build en Release, SDK fijado a `global.json`, restore cacheable y usuario no-root (`$APP_UID`). No incluyen secretos: `.dockerignore` excluye `.env*`, `secrets.json`, `bin/`, `obj/`, `tests/` y `docs/`.
 

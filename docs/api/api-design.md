@@ -25,30 +25,30 @@
 
 ## Seguridad por tipo de API
 
-| API | Autenticación | Ámbito |
-|---|---|---|
-| Public API | `X-API-Key` | Una aplicación y su organización |
-| Management API | JWT + membresía/rol | Organizaciones accesibles al usuario |
-| Platform API | JWT + `super_admin` | Operaciones globales auditadas |
-| Webhook API | Secreto/firma por proveedor y cuenta | Cuenta de proveedor resuelta en backend |
+| API            | Autenticación                        | Ámbito                                  |
+| -------------- | ------------------------------------ | --------------------------------------- |
+| Public API     | `X-API-Key`                          | Una aplicación y su organización        |
+| Management API | JWT + membresía/rol                  | Organizaciones accesibles al usuario    |
+| Platform API   | JWT + `super_admin`                  | Operaciones globales auditadas          |
+| Webhook API    | Secreto/firma por proveedor y cuenta | Cuenta de proveedor resuelta en backend |
 
 ## Public API — aplicaciones consumidoras
 
 Base `/api/v1/public`.
 
-| Método y ruta | Descripción | Resultado principal |
-|---|---|---|
-| `POST /notifications` | Crear envío individual | `202` + `notificationId` |
-| `POST /notifications/bulk` | Crear lote acotado | `202` + `batchId` y resumen |
-| `GET /notifications` | Listar envíos propios | `200` paginado |
-| `GET /notifications/{notificationId}` | Consultar estado | `200` |
-| `GET /notifications/{notificationId}/events` | Timeline de eventos | `200` |
-| `POST /notifications/{notificationId}/cancel` | Cancelar si aún no se despachó | `200` o `409` |
-| `POST /notifications/{notificationId}/retry` | Solicitar reintento autorizado | `202` o `409` |
-| `POST /attachments` | Subir adjunto | `201` |
-| `GET /attachments/{attachmentId}` | Consultar metadatos/URL firmada | `200` |
-| `GET /templates` | Listar plantillas publicadas de la app | `200` |
-| `GET /templates/{code}` | Obtener plantilla/versiones disponibles | `200` |
+| Método y ruta                                 | Descripción                                                                                                                                                   | Resultado principal         |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `POST /notifications`                         | Crear envío individual                                                                                                                                        | `202` + `notificationId`    |
+| `POST /notifications/bulk`                    | Crear lote acotado                                                                                                                                            | `202` + `batchId` y resumen |
+| `GET /notifications`                          | Listar envíos propios                                                                                                                                         | `200` paginado              |
+| `GET /notifications/{notificationId}`         | Consultar estado                                                                                                                                              | `200`                       |
+| `GET /notifications/{notificationId}/events`  | Timeline de eventos                                                                                                                                           | `200`                       |
+| `POST /notifications/{notificationId}/cancel` | Cancelar si aún no se despachó                                                                                                                                | `200` o `409`               |
+| `POST /notifications/{notificationId}/retry`  | Reenvío manual autorizado: crea una nueva notificación vinculada (`resendOfNotificationId`); requiere `Idempotency-Key` nueva y motivo; consume cuota (TP-19) | `202` o `409`               |
+| `POST /attachments`                           | Subir adjunto                                                                                                                                                 | `201`                       |
+| `GET /attachments/{attachmentId}`             | Consultar metadatos/URL firmada                                                                                                                               | `200`                       |
+| `GET /templates`                              | Listar plantillas publicadas de la app                                                                                                                        | `200`                       |
+| `GET /templates/{code}`                       | Obtener plantilla/versiones disponibles                                                                                                                       | `200`                       |
 
 ### Crear notificación
 
@@ -59,36 +59,46 @@ Headers: `X-API-Key`, `Idempotency-Key`, `X-Correlation-Id` opcional.
 Campos: `channel` (`WHATSAPP`, `EMAIL`, `SMS`), `recipient`, `senderId` opcional, `template` o `content`, `attachmentIds[]` opcional, `scheduledAt` opcional y `metadata` no sensible.
 
 Reglas:
+
 - Debe especificarse exactamente una modalidad de contenido: plantilla o contenido directo, sujeto a canal.
 - Para WhatsApp se resuelve `senderId` explícito o remitente default asignado a la aplicación; sin default válido → `422 DEFAULT_SENDER_NOT_CONFIGURED`.
 - El remitente debe estar activo y asignado a la aplicación (`422 SENDER_NOT_CONNECTED` / `422 SENDER_NOT_ASSIGNED_TO_APPLICATION`; un remitente de otra organización → `404`).
 - La cuota WhatsApp se reserva en la transacción de aceptación; al superarla → `429 WHATSAPP_DAILY_QUOTA_EXCEEDED` con `Retry-After` y `retryAt`.
 - Un mismo `Idempotency-Key` y mismo hash devuelve el recurso original; mismo key con request distinto produce `409 IDEMPOTENCY_KEY_CONFLICT`.
+- `attachmentIds[]`: adjuntos de la misma aplicación, asociados mediante `notification_attachments` sin duplicar el archivo. Un adjunto eliminado, expirado o bloqueado por el escaneo → `422 ATTACHMENT_NOT_AVAILABLE`; de otra aplicación u organización → `404` (TP-18).
+
+### Reintento técnico, reenvío manual y conciliación
+
+Semántica normativa en [ADR-0012](../adr/0012-delivery-semantics.md) (TP-19). Los reintentos técnicos y la conciliación son internos: no se exponen como operaciones ni consumen cuota. El único reenvío por API es `retry` (reenvío manual).
+
+### Diagnóstico de cuentas de proveedor
+
+`POST /providers/accounts/{id}/test` y `GET /providers/accounts/{id}/health` usan `IProviderAccountDiagnostics` (TP-17). Devuelven `200` con un resultado neutral también cuando el proveedor falla; si el proveedor no admite el diagnóstico → `422 PROVIDER_DIAGNOSTICS_NOT_SUPPORTED`.
 
 ## Management API — panel administrativo
 
 Base `/api/v1/management`.
 
-| Área | Operaciones |
-|---|---|
-| Organizaciones | `GET/POST /organizations`; `GET/PUT /organizations/{id}`; `PATCH /organizations/{id}/status` |
-| Membresías | `GET/POST /organizations/{id}/memberships`; `PUT /organizations/{id}/memberships/{membershipId}/roles`; `PATCH .../status` |
-| Usuarios | `GET/POST /users`; `GET/PUT /users/{id}`; `PATCH /users/{id}/status` |
-| Roles | `GET/POST /roles`; `PUT /roles/{id}`; `PUT /roles/{id}/permissions` |
-| Aplicaciones | `GET/POST /applications`; `GET/PUT /applications/{id}`; `PATCH /applications/{id}/status`; `PUT /applications/{id}/permissions`; `PUT /applications/{id}/limits` |
-| API Keys | `GET/POST /applications/{id}/api-keys`; `POST /applications/{id}/api-keys/{keyId}/rotate`; `DELETE /applications/{id}/api-keys/{keyId}` |
-| Proveedores | `GET /providers/definitions`; `GET/POST /providers/accounts`; `GET/PUT/DELETE /providers/accounts/{id}`; `POST .../{id}/test`; `GET .../{id}/health`; `POST .../{id}/enable`; `POST .../{id}/disable`; `POST .../{id}/credentials/rotate` |
-| Instancias | `GET/POST /providers/accounts/{id}/instances`; `POST /providers/instances/{id}/connect`; `GET /providers/instances/{id}/qr`; `GET /providers/instances/{id}/status`; `POST .../{id}/disconnect`; `POST .../{id}/reconnect`; `DELETE .../{id}` |
-| Remitentes | `GET /senders`; `GET /senders/{id}`; `PUT /applications/{id}/senders`; `PATCH /senders/{id}/default` |
-| Plantillas | `GET/POST /templates`; `GET/PUT/DELETE /templates/{id}`; `POST /templates/{id}/versions`; `GET .../versions`; `POST .../preview`; `POST .../test` |
-| Campañas | `GET/POST /campaigns`; `GET/PUT /campaigns/{id}`; `POST .../{id}/start`; `POST .../{id}/pause`; `POST .../{id}/cancel`; `GET .../{id}/statistics`; `GET .../{id}/recipients` |
-| Programación | `GET/POST /scheduled-notifications`; `GET /scheduled-notifications/{id}`; `DELETE /scheduled-notifications/{id}` |
-| Dashboard | `GET /dashboard/summary`; `GET /dashboard/deliveries`; `GET /dashboard/providers-health`; `GET /dashboard/consumption` |
-| Auditoría | `GET /audit/events`; `GET /audit/notifications/{notificationId}` |
+| Área           | Operaciones                                                                                                                                                                                                                                   |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Organizaciones | `GET/POST /organizations`; `GET/PUT /organizations/{id}`; `PATCH /organizations/{id}/status`                                                                                                                                                  |
+| Membresías     | `GET/POST /organizations/{id}/memberships`; `PUT /organizations/{id}/memberships/{membershipId}/roles`; `PATCH .../status`                                                                                                                    |
+| Usuarios       | `GET/POST /users`; `GET/PUT /users/{id}`; `PATCH /users/{id}/status`                                                                                                                                                                          |
+| Roles          | `GET /roles`; `GET /roles/{id}` (catálogo del sistema, solo lectura); `PUT /roles/{id}/permissions` (solo `super_admin`, auditado). En v1 no se crean ni editan roles (TP-20); la asignación se hace siempre por membresía                    |
+| Aplicaciones   | `GET/POST /applications`; `GET/PUT /applications/{id}`; `PATCH /applications/{id}/status`; `PUT /applications/{id}/permissions`; `PUT /applications/{id}/limits`                                                                              |
+| API Keys       | `GET/POST /applications/{id}/api-keys`; `POST /applications/{id}/api-keys/{keyId}/rotate`; `DELETE /applications/{id}/api-keys/{keyId}`                                                                                                       |
+| Proveedores    | `GET /providers/definitions`; `GET/POST /providers/accounts`; `GET/PUT/DELETE /providers/accounts/{id}`; `POST .../{id}/test`; `GET .../{id}/health`; `POST .../{id}/enable`; `POST .../{id}/disable`; `POST .../{id}/credentials/rotate`     |
+| Instancias     | `GET/POST /providers/accounts/{id}/instances`; `POST /providers/instances/{id}/connect`; `GET /providers/instances/{id}/qr`; `GET /providers/instances/{id}/status`; `POST .../{id}/disconnect`; `POST .../{id}/reconnect`; `DELETE .../{id}` |
+| Remitentes     | `GET /senders`; `GET /senders/{id}`; `PUT /applications/{id}/senders`; `PATCH /senders/{id}/default`                                                                                                                                          |
+| Plantillas     | `GET/POST /templates`; `GET/PUT/DELETE /templates/{id}`; `POST /templates/{id}/versions`; `GET .../versions`; `POST .../preview`; `POST .../test`                                                                                             |
+| Campañas       | `GET/POST /campaigns`; `GET/PUT /campaigns/{id}`; `POST .../{id}/start`; `POST .../{id}/pause`; `POST .../{id}/cancel`; `GET .../{id}/statistics`; `GET .../{id}/recipients`                                                                  |
+| Programación   | `GET/POST /scheduled-notifications`; `GET /scheduled-notifications/{id}`; `DELETE /scheduled-notifications/{id}`                                                                                                                              |
+| Dashboard      | `GET /dashboard/summary`; `GET /dashboard/deliveries`; `GET /dashboard/providers-health`; `GET /dashboard/consumption`                                                                                                                        |
+| Auditoría      | `GET /audit/events`; `GET /audit/notifications/{notificationId}`                                                                                                                                                                              |
 
 ## Platform API
 
-`super_admin` es un privilegio de plataforma (`platform_role_assignments`), no un rol de membresía ([ADR-0011](../adr/0011-admin-identity.md)). Las operaciones globales de `super_admin` deben estar separadas lógicamente del panel de organización y siempre auditadas. El conjunto inicial incluye gestión de organizaciones, catálogo de proveedores, límites globales, estado de plataforma y consulta de auditoría. No exponer endpoints globales a API Keys de aplicaciones.
+`super_admin` es un privilegio de plataforma (`platform_role_assignments`), no un rol de membresía ([ADR-0011](../adr/0011-admin-identity.md)). Base `/api/v1/platform`: `GET/POST /super-admins` y `POST /super-admins/{assignmentId}/revoke` (TP-15; el primer `super_admin` se crea por bootstrap, [super-admin-bootstrap.md](../operations/super-admin-bootstrap.md)). Las operaciones globales de `super_admin` deben estar separadas lógicamente del panel de organización y siempre auditadas. El conjunto inicial incluye gestión de organizaciones, catálogo de proveedores, límites globales, estado de plataforma y consulta de auditoría. No exponer endpoints globales a API Keys de aplicaciones.
 
 ## Webhook API
 
@@ -106,7 +116,7 @@ Los payloads externos son específicos de versión/proveedor. Validar autenticid
 - `201`: recurso creado.
 - `202`: trabajo aceptado para procesamiento asíncrono.
 - `204`: acción sin cuerpo solo para operaciones expresamente definidas.
-Semántica aprobada (PD-04); catálogo de `code` en [error-codes.md](error-codes.md):
+  Semántica aprobada (PD-04); catálogo de `code` en [error-codes.md](error-codes.md):
 
 - `400`: formato, sintaxis o estructura inválidos (esquema, campo requerido, tipo, cabecera obligatoria ausente).
 - `401`: credencial ausente o inválida.

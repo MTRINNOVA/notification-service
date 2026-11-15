@@ -4,15 +4,15 @@ Este documento separa evidencia del ZIP `Notificaciones-master.zip`, decisiones 
 
 ## Estado resumido
 
-| Proveedor | Evidencia del ZIP | Contrato objetivo | Prueba pendiente |
-|---|---|---|---|
-| Evolution | Imagen `evoapicloud/evolution-api:v2.3.7`; adaptador usa `apikey`, `/message/sendText/{instance}`, `/message/sendMedia/{instance}` | Una instancia/sesión por número y organización, centralizada | Crear instancia, QR, conexión, persistencia, reconexión, texto/media, webhooks, errores y límites |
-| SMSGate | Imagen `ghcr.io/android-sms-gateway/server:latest`; MariaDB 11; Compose usa token privado; adaptador usa Basic Auth y `POST /message` | Gateway y dispositivo Android propiedad de cada cliente | Fijar release/digest; confirmar versión Android; resolver auth; validar ruta/payload/estado y SIM |
-| Docker Mailserver | Imagen `ghcr.io/docker-mailserver/docker-mailserver:17.0.0`; DKIM/DMARC/SPF policy | SMTP centralizado más SMTP externo por organización | Prueba TLS/auth, entrega, rebotes, DNS SPF/DKIM/DMARC/PTR y reputación |
-| PostgreSQL | Imagen `postgres:16-alpine` | PostgreSQL administrado por plataforma | Fijar digest, migraciones, backup/restore, conexiones y RLS si se adopta |
-| Redis | Imagen `redis:7-alpine` | Cache, rate limiting y datos temporales; no broker | Fijar digest, política memoria/evicción y disponibilidad |
-| MinIO | Imagen `chainguard/minio:latest`; integración incompleta en legado | Bucket privado para adjuntos | Fijar versión/digest, API/SDK, políticas, URL firmada, backup/restore |
-| RabbitMQ | No está en Compose legado | Broker principal | Seleccionar imagen/version, quorum/colas, DLX, confirms, persistencia y prueba de reinicio |
+| Proveedor         | Evidencia del ZIP                                                                                                                     | Contrato objetivo                                            | Prueba pendiente                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| Evolution         | Imagen `evoapicloud/evolution-api:v2.3.7`; adaptador usa `apikey`, `/message/sendText/{instance}`, `/message/sendMedia/{instance}`    | Una instancia/sesión por número y organización, centralizada | Crear instancia, QR, conexión, persistencia, reconexión, texto/media, webhooks, errores y límites |
+| SMSGate           | Imagen `ghcr.io/android-sms-gateway/server:latest`; MariaDB 11; Compose usa token privado; adaptador usa Basic Auth y `POST /message` | Gateway y dispositivo Android propiedad de cada cliente      | Fijar release/digest; confirmar versión Android; resolver auth; validar ruta/payload/estado y SIM |
+| Docker Mailserver | Imagen `ghcr.io/docker-mailserver/docker-mailserver:17.0.0`; DKIM/DMARC/SPF policy                                                    | SMTP centralizado más SMTP externo por organización          | Prueba TLS/auth, entrega, rebotes, DNS SPF/DKIM/DMARC/PTR y reputación                            |
+| PostgreSQL        | Imagen `postgres:16-alpine`                                                                                                           | PostgreSQL administrado por plataforma                       | Fijar digest, migraciones, backup/restore, conexiones y RLS si se adopta                          |
+| Redis             | Imagen `redis:7-alpine`                                                                                                               | Cache, rate limiting y datos temporales; no broker           | Fijar digest, política memoria/evicción y disponibilidad                                          |
+| MinIO             | Imagen `chainguard/minio:latest`; integración incompleta en legado                                                                    | Bucket privado para adjuntos                                 | Fijar versión/digest, API/SDK, políticas, URL firmada, backup/restore                             |
+| RabbitMQ          | No está en Compose legado                                                                                                             | Broker principal                                             | Seleccionar imagen/version, quorum/colas, DLX, confirms, persistencia y prueba de reinicio        |
 
 ## Evolution API — evidencia y contrato interno
 
@@ -35,7 +35,8 @@ Este documento separa evidencia del ZIP `Notificaciones-master.zip`, decisiones 
 - Validar tenant al resolver webhook: `providerAccountId` debe mapear a una cuenta interna activa.
 - El evento externo se guarda antes de responder éxito; después se transforma a evento interno.
 - `data.key.id` prueba aceptación/identificación del mensaje en el proveedor, no entrega final.
-- Resultado de envío ambiguo: el intento se registra como `AMBIGUOUS` y la entrega pasa a `RECONCILIATION_REQUIRED` (estado público `PROCESSING`); no reintentar ciegamente. Sustituye a la denominación anterior `UNKNOWN/RECONCILIATION_REQUIRED` ([ADR-0012](../adr/0012-delivery-semantics.md), PD-02 aprobada).
+- Resultado de envío ambiguo: el intento se registra como `AMBIGUOUS` y la entrega pasa a `RECONCILIATION_REQUIRED` (estado público `PROCESSING`); no reintentar ciegamente. La conciliación sigue la política configurable por proveedor de ADR-0012 (TP-19). Validar si v2.3.7 permite consultar el estado de un mensaje enviado.
+- Diagnóstico de cuenta (`IProviderAccountDiagnostics`, TP-17): validar qué endpoint de Evolution permite comprobar la API Key y el estado de la instancia sin enviar mensajes. Sustituye a la denominación anterior `UNKNOWN/RECONCILIATION_REQUIRED` ([ADR-0012](../adr/0012-delivery-semantics.md), PD-02 aprobada).
 
 ### Pruebas de aceptación
 

@@ -41,17 +41,17 @@ flowchart TB
 
 ## Contenedores y responsabilidad
 
-| Contenedor | Responsabilidad | Escalado |
-|---|---|---|
-| `notification-api` | REST pública, management y webhooks | Horizontal |
-| `notification-worker` | Consumir colas y despachar entregas | Horizontal por canal/concurrencia |
-| `notification-scheduler` | Reclamar programaciones vencidas y crear eventos Outbox | Una instancia activa o liderazgo distribuido |
-| `notification-admin` | UI React; vive en repositorio/Compose independiente | Horizontal/estático |
-| PostgreSQL | Fuente de verdad transaccional | Vertical/HA según necesidad |
-| RabbitMQ | Transporte asíncrono | Según capacidad |
-| Redis | Caché, límites y datos efímeros | Según necesidad |
-| MinIO | Objetos adjuntos | Según necesidad |
-| Evolution / Postfix / SMS Gateway | Motores externos/adaptadores | Independiente |
+| Contenedor                        | Responsabilidad                                         | Escalado                                     |
+| --------------------------------- | ------------------------------------------------------- | -------------------------------------------- |
+| `notification-api`                | REST pública, management y webhooks                     | Horizontal                                   |
+| `notification-worker`             | Consumir colas y despachar entregas                     | Horizontal por canal/concurrencia            |
+| `notification-scheduler`          | Reclamar programaciones vencidas y crear eventos Outbox | Una instancia activa o liderazgo distribuido |
+| `notification-admin`              | UI React; vive en repositorio/Compose independiente     | Horizontal/estático                          |
+| PostgreSQL                        | Fuente de verdad transaccional                          | Vertical/HA según necesidad                  |
+| RabbitMQ                          | Transporte asíncrono                                    | Según capacidad                              |
+| Redis                             | Caché, límites y datos efímeros                         | Según necesidad                              |
+| MinIO                             | Objetos adjuntos                                        | Según necesidad                              |
+| Evolution / Postfix / SMS Gateway | Motores externos/adaptadores                            | Independiente                                |
 
 ## Redes
 

@@ -3,8 +3,8 @@
 ## 1. Identidad y multi-tenancy
 
 - Un usuario puede pertenecer a más de una organización y seleccionar el contexto activo.
-- Los roles se resuelven por membresía y no se comparten accidentalmente entre organizaciones. Roles de organización v1: `organization_admin`, `operator`, `viewer` (no existen `org_admin` ni `application_admin`).
-- `super_admin` puede operar globalmente; toda acción global queda auditada. Se almacena en `platform_role_assignments`, independiente de las membresías; intentar asignarlo en una membresía devuelve `422 ROLE_NOT_ASSIGNABLE`. Su concesión y revocación se auditan.
+- Los roles se resuelven por membresía y no se comparten accidentalmente entre organizaciones. Roles de organización v1: `organization_admin`, `operator`, `viewer` (no existen `org_admin`, `application_admin` ni roles personalizados). La API no permite crear ni editar roles ni asignarlos fuera de una membresía.
+- `super_admin` puede operar globalmente; toda acción global queda auditada. El primero se crea por bootstrap idempotente (`SYSTEM_BOOTSTRAP`); los siguientes, con la Platform API. No se puede revocar el último activo (`422 LAST_SUPER_ADMIN_REVOCATION_FORBIDDEN`). Se almacena en `platform_role_assignments`, independiente de las membresías; intentar asignarlo en una membresía devuelve `422 ROLE_NOT_ASSIGNABLE`. Su concesión y revocación se auditan.
 - Una API Key queda vinculada a una sola aplicación y, por transitividad, a una organización.
 - Una aplicación no puede consultar ni modificar recursos de otra organización, incluso manipulando UUIDs.
 - Las pruebas de integración verifican aislamiento para notificaciones, remitentes, proveedores, plantillas, campañas, adjuntos y auditoría.
@@ -30,6 +30,7 @@
 - La aceptación del proveedor no se interpreta como entrega confirmada: la entrega queda en `PROVIDER_ACCEPTED` y el estado público en `SENT`.
 - Resultado ambiguo no genera reenvío ciego: el intento queda `AMBIGUOUS`, la entrega `RECONCILIATION_REQUIRED` y el estado público `PROCESSING` hasta conciliar.
 - `DELIVERED`/`READ` solo se registran con evidencia del proveedor; cada transición de entrega queda en `delivery_status_history`.
+- Reintento técnico: nuevo intento de la misma entrega, sin consumo de cuota. Reenvío manual: nueva notificación con `resendOfNotificationId`, nueva `Idempotency-Key`, motivo auditado y un consumo de cuota; la original no cambia. Conciliación: no crea notificaciones ni entregas y no consume cuota; al vencer su plazo configurable, la entrega queda en intervención manual sin asumir la no entrega.
 
 ## 4. SMS y email
 
@@ -65,6 +66,7 @@
 ## 7. Adjuntos y plantillas
 
 - Adjuntos se almacenan en bucket privado; metadata y checksum en PostgreSQL.
+- Una notificación puede tener varios adjuntos y un adjunto puede reutilizarse en varias notificaciones de la misma aplicación sin duplicar el archivo en MinIO (`notification_attachments`). Un adjunto de otra organización o aplicación responde `404`; uno eliminado, expirado o bloqueado por el escaneo, `422 ATTACHMENT_NOT_AVAILABLE`.
 - Validar tamaño, extensión, MIME real y política de escaneo.
 - Las URLs firmadas expiran y no permiten listado público.
 - Las versiones publicadas de plantillas son inmutables.

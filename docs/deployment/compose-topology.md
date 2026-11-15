@@ -59,17 +59,17 @@ Credenciales se inyectan desde secretos de Docker/Portainer o secret manager. No
 
 ## Requisitos operativos por servicio
 
-| Servicio | Persistencia | Exposición |
-|---|---|---|
-| API | No requiere volumen | Solo Traefik |
-| Worker | Logs/telemetría externa | Ninguna |
-| Scheduler | Estado durable en PostgreSQL | Ninguna |
-| PostgreSQL | Volumen + backups | Solo red interna |
-| RabbitMQ | Volumen + definiciones | Solo red interna |
-| Redis | Opcional según datos | Solo red interna |
-| MinIO | Volumen + backup de objetos | Solo red interna |
-| Evolution | Volumen de sesión | Red de proveedores; UI/endpoint no público |
-| Postfix | Configuración/colas según diseño | SMTP restringido; no abrir relay público |
+| Servicio   | Persistencia                     | Exposición                                 |
+| ---------- | -------------------------------- | ------------------------------------------ |
+| API        | No requiere volumen              | Solo Traefik                               |
+| Worker     | Logs/telemetría externa          | Ninguna                                    |
+| Scheduler  | Estado durable en PostgreSQL     | Ninguna                                    |
+| PostgreSQL | Volumen + backups                | Solo red interna                           |
+| RabbitMQ   | Volumen + definiciones           | Solo red interna                           |
+| Redis      | Opcional según datos             | Solo red interna                           |
+| MinIO      | Volumen + backup de objetos      | Solo red interna                           |
+| Evolution  | Volumen de sesión                | Red de proveedores; UI/endpoint no público |
+| Postfix    | Configuración/colas según diseño | SMTP restringido; no abrir relay público   |
 
 ## Notas
 

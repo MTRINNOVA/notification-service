@@ -2,12 +2,12 @@
 
 ## Catálogo aprobado
 
-| Código | Canal | Tecnología | Etapa | Evidencia/estado |
-|---|---|---|---|---|
-| `EVOLUTION_API` | WhatsApp | Evolution API / Baileys | Inicial | `evoapicloud/evolution-api:v2.3.7` confirmado por el ZIP; digest pendiente |
-| `META_CLOUD_API` | WhatsApp | Meta WhatsApp Cloud API | Futuro, no implementado | Extensión arquitectónica prevista; onboarding, permisos y contrato se definirán antes de esa etapa |
-| `POSTFIX_SMTP` | Email | Docker Mailserver / Postfix + OpenDKIM/OpenDMARC | Inicial | `ghcr.io/docker-mailserver/docker-mailserver:17.0.0` en ZIP |
-| `ANDROID_SMS_GATEWAY` | SMS | Android SMS Gateway (SMSGate) | Inicial | `ghcr.io/android-sms-gateway/server:latest`; versión exacta pendiente |
+| Código                | Canal    | Tecnología                                       | Etapa                   | Evidencia/estado                                                                                   |
+| --------------------- | -------- | ------------------------------------------------ | ----------------------- | -------------------------------------------------------------------------------------------------- |
+| `EVOLUTION_API`       | WhatsApp | Evolution API / Baileys                          | Inicial                 | `evoapicloud/evolution-api:v2.3.7` confirmado por el ZIP; digest pendiente                         |
+| `META_CLOUD_API`      | WhatsApp | Meta WhatsApp Cloud API                          | Futuro, no implementado | Extensión arquitectónica prevista; onboarding, permisos y contrato se definirán antes de esa etapa |
+| `POSTFIX_SMTP`        | Email    | Docker Mailserver / Postfix + OpenDKIM/OpenDMARC | Inicial                 | `ghcr.io/docker-mailserver/docker-mailserver:17.0.0` en ZIP                                        |
+| `ANDROID_SMS_GATEWAY` | SMS      | Android SMS Gateway (SMSGate)                    | Inicial                 | `ghcr.io/android-sms-gateway/server:latest`; versión exacta pendiente                              |
 
 ## Contratos y aislamiento WhatsApp
 
@@ -15,24 +15,35 @@
 - `sender_id` es un identificador interno, opaco y validado contra `organization_id`, `application_id`, canal y permisos. El backend resuelve el proveedor y la instancia externa.
 - Una organización puede conectar varios números. Cada número/sesión se representa mediante un remitente interno y se puede asignar a una o varias aplicaciones de la misma organización según permisos explícitos.
 - No se permite compartir instancias, sesiones ni credenciales entre organizaciones. La unicidad del nombre de instancia debe contemplar el ámbito global de Evolution.
-- Puertos especializados por canal (PD-03, aprobada; detalle en [hexagonal.md](../architecture/hexagonal.md#puertos-de-proveedores-decisión-aprobada-pd-03-2026-11-15)): envío WhatsApp (`IWhatsAppProvider`) separado de la administración de conexión/QR (`IWhatsAppConnectionManager`); `IEmailProvider` e `ISmsProvider` sin operaciones de QR. Todos devuelven el `ProviderSendResult` neutral (`PROVIDER_ACCEPTED`, `TRANSIENT_FAILURE`, `PERMANENT_FAILURE`, `AMBIGUOUS`). No existe contrato universal `INotificationProvider`. El dominio no debe conocer rutas ni DTOs de Evolution, SMTP o SMSGate.
+- Puertos especializados por canal (PD-03, aprobada; detalle en [hexagonal.md](../architecture/hexagonal.md#puertos-de-proveedores-decisión-aprobada-pd-03-2026-11-15)): envío WhatsApp (`IWhatsAppProvider`) separado de la administración de conexión/QR (`IWhatsAppConnectionManager`); `IEmailProvider` e `ISmsProvider` sin operaciones de QR. Todos devuelven el `ProviderSendResult` neutral (`PROVIDER_ACCEPTED`, `TRANSIENT_FAILURE`, `PERMANENT_FAILURE`, `AMBIGUOUS`). No existe contrato universal `INotificationProvider`. El diagnóstico de cuentas (prueba de conexión y salud) usa el puerto opcional `IProviderAccountDiagnostics` (TP-17), separado del envío. El dominio no debe conocer rutas ni DTOs de Evolution, SMTP o SMSGate.
 - Capacidades explícitas por proveedor (`ProviderCapabilities`): texto, media, estado de conexión, webhooks/eventos, evidencia de entrega, evidencia de lectura y límites. No asumir que ambos proveedores futuros soportarán exactamente las mismas funciones.
 
 ### Capacidades de estado por proveedor (v1)
 
-| Proveedor | Aceptación (`SENT`) | Entrega final (`DELIVERED`) | Lectura (`READ`) |
-|---|---|---|---|
-| Evolution v2.3.7 | Sí (`data.key.id`) | Posible por webhook, **por validar** | Posible por webhook, **por validar** |
-| SMTP (Postfix/externo) | Sí (respuesta SMTP positiva) | No (solo rebotes/DSN si se configuran → `FAILED`) | No |
-| SMSGate | Sí (`id`) | Depende de dispositivo/operador, **por validar** | No |
+| Proveedor              | Aceptación (`SENT`)          | Entrega final (`DELIVERED`)                       | Lectura (`READ`)                     |
+| ---------------------- | ---------------------------- | ------------------------------------------------- | ------------------------------------ |
+| Evolution v2.3.7       | Sí (`data.key.id`)           | Posible por webhook, **por validar**              | Posible por webhook, **por validar** |
+| SMTP (Postfix/externo) | Sí (respuesta SMTP positiva) | No (solo rebotes/DSN si se configuran → `FAILED`) | No                                   |
+| SMSGate                | Sí (`id`)                    | Depende de dispositivo/operador, **por validar**  | No                                   |
 
-Un estado sin capacidad confirmada no se reporta. Los estados y su semántica están en [ADR-0012](../adr/0012-delivery-semantics.md).
+Un estado sin capacidad confirmada no se reporta.
+
+### Diagnóstico y conciliación por proveedor (TP-17, TP-19)
+
+| Proveedor              | `TestConnectionAsync`                                      | `GetHealthAsync`                     | Consulta de estado de mensaje (conciliación)               |
+| ---------------------- | ---------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------- |
+| Evolution v2.3.7       | Previsto (estado de instancia/API), **por validar**        | Previsto                             | **Por validar** en la versión fijada                       |
+| SMTP (Postfix/externo) | Previsto (conexión TLS + autenticación, sin enviar correo) | Previsto (último resultado conocido) | No disponible: solo eventos de rebote/DSN si se configuran |
+| SMSGate                | **Por validar** (autenticación sin resolver)               | **Por validar**                      | **Por validar**                                            |
+
+Con consulta no disponible, la conciliación depende de eventos y, al vencer el plazo configurado, pasa a intervención manual. Nunca se asume la no entrega ([ADR-0012](../adr/0012-delivery-semantics.md)). Los estados y su semántica están en [ADR-0012](../adr/0012-delivery-semantics.md).
 
 ## WhatsApp — Evolution API v2.3.7 (primera etapa)
 
 ### Evidencia de la implementación anterior
 
 `src/adapters/WhatsAppEvolutionAdapter.ts`:
+
 - URL base `WHATSAPP_API_URL` (default `http://127.0.0.1:8081`).
 - Header `apikey` con `WHATSAPP_API_KEY`.
 - Instancia mediante `envelope.whatsappInstance` o `WHATSAPP_INSTANCE_NAME` (default `notificaciones_corp`).

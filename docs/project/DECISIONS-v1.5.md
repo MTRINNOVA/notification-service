@@ -86,7 +86,7 @@ Meta WhatsApp Cloud API queda expresamente fuera de la primera versión.
 
 - Cada organización tendrá una zona horaria IANA obligatoria.
 - Valor inicial predeterminado para nuevas organizaciones: `America/Lima`.
-- Las aplicaciones heredan la zona horaria de su organización, salvo que exista una configuración explícita permitida. *(Precisado el 2026-11-15, PD-05: en v1 no existe ninguna configuración por aplicación; ver «Decisiones de cierre».)*
+- Las aplicaciones heredan la zona horaria de su organización, salvo que exista una configuración explícita permitida. _(Precisado el 2026-11-15, PD-05: en v1 no existe ninguna configuración por aplicación; ver «Decisiones de cierre».)_
 - Los instantes se almacenan en UTC; los cálculos de calendario, cuotas y programación respetan la zona horaria configurada.
 
 ## Reglas transversales
@@ -101,16 +101,28 @@ Meta WhatsApp Cloud API queda expresamente fuera de la primera versión.
 
 Aprobadas expresamente por el usuario. Precisan, sin sustituirlas, las decisiones de negocio anteriores. Historial y alternativas: [PENDING-DECISIONS.md](PENDING-DECISIONS.md).
 
-| ID | Decisión | Documento normativo |
-|---|---|---|
+| ID    | Decisión                                                                                                                                                                                   | Documento normativo                                                                                               |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
 | PD-01 | Roles v1: `super_admin` (privilegio de plataforma en `platform_role_assignments`), `organization_admin`, `operator`, `viewer` (roles de membresía). Sin `application_admin` ni `org_admin` | [ADR-0011](../adr/0011-admin-identity.md), [rbac-matrix.md](../security/rbac-matrix.md), [erd.md](../data/erd.md) |
-| PD-02 | Estados en tres niveles: público, entrega e intento; `RECONCILIATION_REQUIRED` solo en entrega; historial `delivery_status_history` | [ADR-0012](../adr/0012-delivery-semantics.md) |
-| PD-03 | Puertos de proveedores especializados por canal; sin `INotificationProvider` | [hexagonal.md](../architecture/hexagonal.md), [ADR-0004](../adr/0004-whatsapp-adapters.md) |
-| PD-04 | `400` formato, `409` conflicto, `422` regla de negocio; RFC 9457 con catálogo cerrado de `code` | [api-design.md](../api/api-design.md), [error-codes.md](../api/error-codes.md) |
-| PD-05 | Sin `applications.timezone_override` en v1; zona horaria única de la organización para cuotas y programación | [erd.md](../data/erd.md) |
-| PD-06 | Hosts por variables `NOTIFICATIONS_API_HOST`, `NOTIFICATIONS_ADMIN_HOST`, `NOTIFICATIONS_WEBHOOKS_HOST`; DNS reales sin fijar; Traefik externo | [docker.md](../deployment/docker.md) |
-| PD-07 | Una imagen por host: `notification-api`, `notification-worker`, `notification-scheduler` | [docker.md](../deployment/docker.md) |
-| PD-08 | `openapi.yaml` declara `409`, `422`, `429` (y `413`/`415`/`503` donde corresponde) por operación, con componentes RFC 9457 reutilizables | [openapi.yaml](../api/openapi.yaml) |
+| PD-02 | Estados en tres niveles: público, entrega e intento; `RECONCILIATION_REQUIRED` solo en entrega; historial `delivery_status_history`                                                        | [ADR-0012](../adr/0012-delivery-semantics.md)                                                                     |
+| PD-03 | Puertos de proveedores especializados por canal; sin `INotificationProvider`                                                                                                               | [hexagonal.md](../architecture/hexagonal.md), [ADR-0004](../adr/0004-whatsapp-adapters.md)                        |
+| PD-04 | `400` formato, `409` conflicto, `422` regla de negocio; RFC 9457 con catálogo cerrado de `code`                                                                                            | [api-design.md](../api/api-design.md), [error-codes.md](../api/error-codes.md)                                    |
+| PD-05 | Sin `applications.timezone_override` en v1; zona horaria única de la organización para cuotas y programación                                                                               | [erd.md](../data/erd.md)                                                                                          |
+| PD-06 | Hosts por variables `NOTIFICATIONS_API_HOST`, `NOTIFICATIONS_ADMIN_HOST`, `NOTIFICATIONS_WEBHOOKS_HOST`; DNS reales sin fijar; Traefik externo                                             | [docker.md](../deployment/docker.md)                                                                              |
+| PD-07 | Una imagen por host: `notification-api`, `notification-worker`, `notification-scheduler`                                                                                                   | [docker.md](../deployment/docker.md)                                                                              |
+| PD-08 | `openapi.yaml` declara `409`, `422`, `429` (y `413`/`415`/`503` donde corresponde) por operación, con componentes RFC 9457 reutilizables                                                   | [openapi.yaml](../api/openapi.yaml)                                                                               |
+
+## Decisiones técnicas TP-02 y TP-15 a TP-20 (aprobadas el 2026-11-15)
+
+| ID    | Decisión                                                                                                                                                  | Documento normativo                                                                                           |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| TP-02 | Testcontainers con PostgreSQL real para las pruebas de integración de persistencia                                                                        | [integration-testing-postgresql.md](../testing/integration-testing-postgresql.md)                             |
+| TP-15 | Bootstrap manual e idempotente del primer `super_admin` (`SYSTEM_BOOTSTRAP`) y Platform API para concesiones y revocaciones; protección del último activo | [ADR-0011](../adr/0011-admin-identity.md), [super-admin-bootstrap.md](../operations/super-admin-bootstrap.md) |
+| TP-16 | Contrato OpenAPI normalizado (rutas, paginación, operaciones del inventario); retirada de `PUT /users/{userId}/roles`                                     | [openapi.yaml](../api/openapi.yaml)                                                                           |
+| TP-17 | Puerto opcional `IProviderAccountDiagnostics` para prueba de conexión y salud                                                                             | [hexagonal.md](../architecture/hexagonal.md)                                                                  |
+| TP-18 | Relación muchos a muchos `notification_attachments`                                                                                                       | [erd.md](../data/erd.md)                                                                                      |
+| TP-19 | Reintento técnico, reenvío manual y conciliación separados; conciliación configurable por proveedor                                                       | [ADR-0012](../adr/0012-delivery-semantics.md)                                                                 |
+| TP-20 | Sin roles personalizados en v1: catálogo cerrado `organization_admin`, `operator`, `viewer`                                                               | [ADR-0011](../adr/0011-admin-identity.md), [rbac-matrix.md](../security/rbac-matrix.md)                       |
 
 ## Pendientes técnicos que no son decisiones abiertas
 
@@ -120,7 +132,7 @@ Estos puntos requieren inspección o pruebas y no deben confundirse con dudas de
 2. Fijar digest de Evolution y verificar que coincide con la imagen realmente desplegada.
 3. Fijar release/digest de SMSGate; confirmar versión de app Android, dispositivo y SIM; resolver la discrepancia entre Basic Auth y token privado del ZIP.
 4. Validar Postfix/SMTP, autenticación, DNS (SPF, DKIM, DMARC, PTR) y rebotes.
-5. Completar OpenAPI 3.1, ERD/diccionario y contratos de error con las decisiones de este documento. *(2026-11-15: ERD aprobado para v1, catálogo de errores y respuestas 409/422/429 incorporados. Quedan pendientes las rutas del inventario aún no presentes en OpenAPI; ver [technical-pending-register.md](../operations/technical-pending-register.md).)*
+5. Completar OpenAPI 3.1, ERD/diccionario y contratos de error con las decisiones de este documento. _(2026-11-15: ERD aprobado para v1, catálogo de errores y respuestas 409/422/429 incorporados. Quedan pendientes las rutas del inventario aún no presentes en OpenAPI; ver [technical-pending-register.md](../operations/technical-pending-register.md).)_
 6. Cerrar dominios/subdominios, nombre de red Traefik, rutas/UID/GID, recursos y almacenamiento del VPS.
 7. Definir y probar RPO/RTO y restauración de backups.
 8. Ejecutar pruebas de aislamiento multi-tenant, carga y recuperación.

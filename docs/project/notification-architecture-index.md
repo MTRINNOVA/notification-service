@@ -12,6 +12,7 @@
 - Despliegue: `notification-service/docs/deployment/`
 - Operación y readiness: `notification-service/docs/operations/`
 - Aceptación: `notification-service/docs/acceptance/criteria.md`
+- Pruebas: `notification-service/docs/testing/integration-testing-postgresql.md`
 
 ## Frontend (`notification-admin`)
 
@@ -32,3 +33,5 @@
 - Saneamiento de la fundación: `notification-service/docs/operations/repository-sanitization-report.md`
 - Pendientes técnicos: `notification-service/docs/operations/technical-pending-register.md`
 - Cierre de decisiones PD-01 a PD-08: `notification-service/docs/operations/decision-closure-report.md`
+- Cierre de decisiones TP-02, TP-15 a TP-20: `notification-service/docs/operations/decision-closure-report-tp15-tp20.md`
+- Bootstrap y recuperación de `super_admin`: `notification-service/docs/operations/super-admin-bootstrap.md`

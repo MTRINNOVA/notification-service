@@ -6,16 +6,16 @@ Se conservan el problema, el análisis y las alternativas de cada punto como con
 
 Origen: saneamiento del repositorio del 2026-11-15 ([repository-sanitization-report.md](../operations/repository-sanitization-report.md)).
 
-| ID | Tema | Estado | Decisión vigente en |
-|---|---|---|---|
-| [PD-01](#pd-01-nomenclatura-y-alcance-de-roles) | Nomenclatura y alcance de roles | **Aprobada** (2026-11-15) | [ADR-0011](../adr/0011-admin-identity.md), [rbac-matrix.md](../security/rbac-matrix.md), [erd.md](../data/erd.md) |
-| [PD-02](#pd-02-máquina-de-estados-de-notificación-entrega-e-intento) | Máquina de estados | **Aprobada** (2026-11-15) | [ADR-0012](../adr/0012-delivery-semantics.md), [erd.md](../data/erd.md) |
-| [PD-03](#pd-03-puertos-de-proveedores) | Puertos de proveedores | **Aprobada** (2026-11-15) | [hexagonal.md](../architecture/hexagonal.md), [ADR-0004](../adr/0004-whatsapp-adapters.md) |
-| [PD-04](#pd-04-uso-de-400-409-y-422) | Uso de 400 / 409 / 422 | **Aprobada** (2026-11-15) | [api-design.md](../api/api-design.md), [error-codes.md](../api/error-codes.md) |
-| [PD-05](#pd-05-timezone_override-de-aplicación) | `timezone_override` de aplicación | **Aprobada** (2026-11-15) | [erd.md](../data/erd.md), [DECISIONS-v1.5.md](DECISIONS-v1.5.md) |
-| [PD-06](#pd-06-subdominios-y-dns) | Subdominios y DNS | **Aprobada** (2026-11-15) | [docker.md](../deployment/docker.md) |
-| [PD-07](#pd-07-estrategia-de-imágenes-docker) | Estrategia de imágenes Docker | **Aprobada** (2026-11-15) | [docker.md](../deployment/docker.md) |
-| [PD-08](#pd-08-respuestas-409-y-429-ausentes-en-openapiyaml) | Respuestas 409/429 ausentes en `openapi.yaml` | **Aprobada** (2026-11-15) | [openapi.yaml](../api/openapi.yaml) |
+| ID                                                                   | Tema                                          | Estado                    | Decisión vigente en                                                                                               |
+| -------------------------------------------------------------------- | --------------------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| [PD-01](#pd-01-nomenclatura-y-alcance-de-roles)                      | Nomenclatura y alcance de roles               | **Aprobada** (2026-11-15) | [ADR-0011](../adr/0011-admin-identity.md), [rbac-matrix.md](../security/rbac-matrix.md), [erd.md](../data/erd.md) |
+| [PD-02](#pd-02-máquina-de-estados-de-notificación-entrega-e-intento) | Máquina de estados                            | **Aprobada** (2026-11-15) | [ADR-0012](../adr/0012-delivery-semantics.md), [erd.md](../data/erd.md)                                           |
+| [PD-03](#pd-03-puertos-de-proveedores)                               | Puertos de proveedores                        | **Aprobada** (2026-11-15) | [hexagonal.md](../architecture/hexagonal.md), [ADR-0004](../adr/0004-whatsapp-adapters.md)                        |
+| [PD-04](#pd-04-uso-de-400-409-y-422)                                 | Uso de 400 / 409 / 422                        | **Aprobada** (2026-11-15) | [api-design.md](../api/api-design.md), [error-codes.md](../api/error-codes.md)                                    |
+| [PD-05](#pd-05-timezone_override-de-aplicación)                      | `timezone_override` de aplicación             | **Aprobada** (2026-11-15) | [erd.md](../data/erd.md), [DECISIONS-v1.5.md](DECISIONS-v1.5.md)                                                  |
+| [PD-06](#pd-06-subdominios-y-dns)                                    | Subdominios y DNS                             | **Aprobada** (2026-11-15) | [docker.md](../deployment/docker.md)                                                                              |
+| [PD-07](#pd-07-estrategia-de-imágenes-docker)                        | Estrategia de imágenes Docker                 | **Aprobada** (2026-11-15) | [docker.md](../deployment/docker.md)                                                                              |
+| [PD-08](#pd-08-respuestas-409-y-429-ausentes-en-openapiyaml)         | Respuestas 409/429 ausentes en `openapi.yaml` | **Aprobada** (2026-11-15) | [openapi.yaml](../api/openapi.yaml)                                                                               |
 
 Resuelto durante el saneamiento (no requiere decisión adicional): **cadena de conexión** → `ConnectionStrings:DefaultConnection` / `ConnectionStrings__DefaultConnection`, la convención que ya documentaba [compose-topology.md](../deployment/compose-topology.md) y la preferencia indicada por el usuario.
 
@@ -27,10 +27,10 @@ Resuelto durante el saneamiento (no requiere decisión adicional): **cadena de c
 
 ### Problema
 
-| Fuente | Roles |
-|---|---|
+| Fuente                                                                                    | Roles                                                                          |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | [ADR-0011](../adr/0011-admin-identity.md) (estado: Aceptado; "roles iniciales sugeridos") | `super_admin`, `organization_admin`, `application_admin`, `operator`, `viewer` |
-| [rbac-matrix.md](../security/rbac-matrix.md) | `super_admin`, `org_admin`, `operator`, `viewer` (+ API Key de aplicación) |
+| [rbac-matrix.md](../security/rbac-matrix.md)                                              | `super_admin`, `org_admin`, `operator`, `viewer` (+ API Key de aplicación)     |
 
 Además, el [ERD](../data/erd.md) no define dónde se almacena `super_admin`: `roles.organization_id` admite `NULL` (rol global), pero la única asignación de roles es `membership_roles`, que depende de una membresía de organización. La matriz RBAC exige que `super_admin` "no debe ser asignado como rol ordinario de organización".
 
@@ -40,13 +40,13 @@ Además, el [ERD](../data/erd.md) no define dónde se almacena `super_admin`: `r
 2. **`application_admin`:** solo aparece en el ADR. Un rol limitado a ciertas aplicaciones requiere asignar roles con ámbito de aplicación, y `membership_roles (membership_id, role_id)` no tiene `application_id`. Adoptarlo implica cambiar el modelo.
 3. **Alcance según la matriz RBAC** (base para cualquier alternativa):
 
-| Rol | Ámbito | Resumen de permisos |
-|---|---|---|
-| `super_admin` | Plataforma | Operaciones globales (organizaciones, catálogo de proveedores, límites globales), siempre auditadas. No envía notificaciones por defecto |
+| Rol                                | Ámbito                           | Resumen de permisos                                                                                                                                |
+| ---------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `super_admin`                      | Plataforma                       | Operaciones globales (organizaciones, catálogo de proveedores, límites globales), siempre auditadas. No envía notificaciones por defecto           |
 | `organization_admin` / `org_admin` | Una organización (vía membresía) | Miembros, aplicaciones, API Keys, proveedores y credenciales, WhatsApp, remitentes, plantillas, campañas, dashboard y auditoría de su organización |
-| `operator` | Una organización | Operación según permisos concedidos (conectar WhatsApp, asignar remitentes, plantillas, enviar, cancelar/reintentar) |
-| `viewer` | Una organización | Solo lectura (notificaciones, campañas, dashboard) |
-| API Key | Una aplicación | Scopes propios; no hereda permisos humanos |
+| `operator`                         | Una organización                 | Operación según permisos concedidos (conectar WhatsApp, asignar remitentes, plantillas, enviar, cancelar/reintentar)                               |
+| `viewer`                           | Una organización                 | Solo lectura (notificaciones, campañas, dashboard)                                                                                                 |
+| API Key                            | Una aplicación                   | Scopes propios; no hereda permisos humanos                                                                                                         |
 
 ### Alternativas
 
@@ -79,12 +79,12 @@ Define los datos iniciales de `roles` y `permissions`, si `membership_roles` lle
 
 **1. Intento (`notification_attempts.result_code`): inmutable, una fila por llamada al proveedor.**
 
-| Resultado | Significado |
-|---|---|
+| Resultado           | Significado                                                                                   |
+| ------------------- | --------------------------------------------------------------------------------------------- |
 | `PROVIDER_ACCEPTED` | El proveedor aceptó la solicitud (HTTP 2xx de Evolution, respuesta SMTP 250, `id` de SMSGate) |
-| `TRANSIENT_FAILURE` | Error recuperable (timeout **antes** de enviar, 5xx, 429 del proveedor) |
-| `PERMANENT_FAILURE` | Error no recuperable (destinatario inválido, credencial inválida) |
-| `AMBIGUOUS` | No se sabe si el proveedor recibió el mensaje (timeout o caída **después** de enviar) |
+| `TRANSIENT_FAILURE` | Error recuperable (timeout **antes** de enviar, 5xx, 429 del proveedor)                       |
+| `PERMANENT_FAILURE` | Error no recuperable (destinatario inválido, credencial inválida)                             |
+| `AMBIGUOUS`         | No se sabe si el proveedor recibió el mensaje (timeout o caída **después** de enviar)         |
 
 **2. Entrega (`notification_deliveries.status`): ciclo de vida técnico frente al proveedor.**
 
@@ -112,23 +112,23 @@ stateDiagram-v2
 - `RECONCILIATION_REQUIRED` **no** se reintenta automáticamente ([ADR-0012](../adr/0012-delivery-semantics.md)). Un reenvío manual requiere autorización y queda auditado.
 - `DELIVERED` y `READ` solo se registran con evidencia del proveedor, según sus capacidades declaradas:
 
-| Proveedor | Aceptación | Entrega final | Lectura |
-|---|---|---|---|
-| Evolution v2.3.7 | Sí (`data.key.id`) | Posible por webhook, **por validar** | Posible por webhook, **por validar** |
-| SMTP (Postfix/externo) | Sí (`SMTP_ACCEPTED`) | No (solo rebotes/DSN si se configuran) | No |
-| SMSGate | Sí (`id`) | Depende de dispositivo y operador, **por validar** | No |
+| Proveedor              | Aceptación           | Entrega final                                      | Lectura                              |
+| ---------------------- | -------------------- | -------------------------------------------------- | ------------------------------------ |
+| Evolution v2.3.7       | Sí (`data.key.id`)   | Posible por webhook, **por validar**               | Posible por webhook, **por validar** |
+| SMTP (Postfix/externo) | Sí (`SMTP_ACCEPTED`) | No (solo rebotes/DSN si se configuran)             | No                                   |
+| SMSGate                | Sí (`id`)            | Depende de dispositivo y operador, **por validar** | No                                   |
 
 **3. Notificación (`notifications.status`): estado público resumido para la API.** En v1 hay una entrega por notificación ([ERD](../data/erd.md)), así que el estado público se **deriva** de la entrega:
 
-| Entrega | Notificación (API) |
-|---|---|
-| `PENDING` | `ACCEPTED` (o `SCHEDULED` si tiene `scheduledAt` futuro) |
-| `QUEUED`, `RETRY_PENDING` | `QUEUED` |
-| `IN_PROGRESS`, `RECONCILIATION_REQUIRED` | `PROCESSING` |
-| `PROVIDER_ACCEPTED` | `SENT` |
-| `DELIVERED` / `READ` | `DELIVERED` / `READ` |
-| `FAILED`, `DEAD_LETTER` | `FAILED` |
-| `CANCELLED` | `CANCELLED` |
+| Entrega                                  | Notificación (API)                                       |
+| ---------------------------------------- | -------------------------------------------------------- |
+| `PENDING`                                | `ACCEPTED` (o `SCHEDULED` si tiene `scheduledAt` futuro) |
+| `QUEUED`, `RETRY_PENDING`                | `QUEUED`                                                 |
+| `IN_PROGRESS`, `RECONCILIATION_REQUIRED` | `PROCESSING`                                             |
+| `PROVIDER_ACCEPTED`                      | `SENT`                                                   |
+| `DELIVERED` / `READ`                     | `DELIVERED` / `READ`                                     |
+| `FAILED`, `DEAD_LETTER`                  | `FAILED`                                                 |
+| `CANCELLED`                              | `CANCELLED`                                              |
 
 ### Alternativas
 
@@ -138,7 +138,7 @@ stateDiagram-v2
 
 ### Recomendación
 
-**A.** Separa responsabilidades sin sobreingeniería, cumple ADR-0012 y no promete entregas que el proveedor no confirma. La alternativa B es razonable si el producto prefiere transparencia total. *(Texto histórico: nombres y valores quedaron fijados en la aprobación; el plazo de conciliación se fijará al validar cada proveedor.)*
+**A.** Separa responsabilidades sin sobreingeniería, cumple ADR-0012 y no promete entregas que el proveedor no confirma. La alternativa B es razonable si el producto prefiere transparencia total. _(Texto histórico: nombres y valores quedaron fijados en la aprobación; el plazo de conciliación se fijará al validar cada proveedor.)_
 
 ### Impacto en la Fase 2
 
@@ -148,7 +148,7 @@ Define tipos y restricciones `CHECK` de `notifications.status`, `notification_de
 
 ## PD-03. Puertos de proveedores
 
-> **Aprobada el 2026-11-15:** alternativa A. La lista aprobada no incluye `IProviderConnectionTester`; las operaciones de prueba y salud de cuentas quedan abiertas en TP-17. Normativa vigente: [hexagonal.md](../architecture/hexagonal.md#puertos-de-proveedores-decisión-aprobada-pd-03-2026-11-15).
+> **Aprobada el 2026-11-15:** alternativa A. La lista aprobada no incluye `IProviderConnectionTester`; las operaciones de prueba y salud de cuentas quedaron abiertas en TP-17, _resuelto el 2026-11-15 con el puerto opcional `IProviderAccountDiagnostics`_. Normativa vigente: [hexagonal.md](../architecture/hexagonal.md#puertos-de-proveedores-decisión-aprobada-pd-03-2026-11-15).
 
 ### Problema
 
@@ -158,15 +158,15 @@ Define tipos y restricciones `CHECK` de `notifications.status`, `notification_de
 
 Ubicación: `NotificationService.Application/Abstractions/Providers/`. Tipos neutrales, sin DTOs de proveedor.
 
-| Puerto | Responsabilidad | Implementación inicial |
-|---|---|---|
-| `IWhatsAppProvider` | `SendTextAsync`, `SendMediaAsync` → `ProviderSendResult` | Evolution |
-| `IWhatsAppConnectionManager` | Crear/eliminar instancia, obtener QR efímero, consultar estado, desconectar/reconectar | Evolution |
-| `IEmailProvider` | `SendAsync(EmailMessage)` → `ProviderSendResult` | SMTP (Postfix y SMTP externo comparten el adaptador; distinto perfil) |
-| `ISmsProvider` | `SendAsync(SmsMessage)` → `ProviderSendResult` | SMSGate |
-| `IProviderConnectionTester` (opcional) | `TestConnectionAsync`, `GetHealthAsync` | Solo los adaptadores que lo soporten |
-| `IProviderWebhookVerifier` | Verificar autenticidad (firma/token) de un webhook para una cuenta | Por proveedor, tras cerrar su contrato |
-| `IProviderWebhookTranslator` | Convertir el payload validado en eventos internos canónicos | Por proveedor |
+| Puerto                                 | Responsabilidad                                                                        | Implementación inicial                                                |
+| -------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `IWhatsAppProvider`                    | `SendTextAsync`, `SendMediaAsync` → `ProviderSendResult`                               | Evolution                                                             |
+| `IWhatsAppConnectionManager`           | Crear/eliminar instancia, obtener QR efímero, consultar estado, desconectar/reconectar | Evolution                                                             |
+| `IEmailProvider`                       | `SendAsync(EmailMessage)` → `ProviderSendResult`                                       | SMTP (Postfix y SMTP externo comparten el adaptador; distinto perfil) |
+| `ISmsProvider`                         | `SendAsync(SmsMessage)` → `ProviderSendResult`                                         | SMSGate                                                               |
+| `IProviderConnectionTester` (opcional) | `TestConnectionAsync`, `GetHealthAsync`                                                | Solo los adaptadores que lo soporten                                  |
+| `IProviderWebhookVerifier`             | Verificar autenticidad (firma/token) de un webhook para una cuenta                     | Por proveedor, tras cerrar su contrato                                |
+| `IProviderWebhookTranslator`           | Convertir el payload validado en eventos internos canónicos                            | Por proveedor                                                         |
 
 Tipos compartidos: `ProviderSendResult { Outcome (PROVIDER_ACCEPTED | TRANSIENT_FAILURE | PERMANENT_FAILURE | AMBIGUOUS), ProviderMessageId?, ErrorCode?, RetryAfter? }` (alineado con PD-02) y `ProviderCapabilities` (texto, media, eventos de entrega/lectura, conexión por QR).
 
@@ -198,11 +198,11 @@ Ninguno directo: afecta a las fases de adaptadores. Los contratos deben fijarse 
 
 ### Alternativas (todas con RFC 9457 y `code` estable)
 
-| Código | A. Sin 422 | B. Con 422 (propuesta) |
-|---|---|---|
-| `400` | Esquema, formato **y** reglas de negocio | Solo esquema/sintaxis/formato (campo requerido, tipo, longitud, enum) |
-| `409` | Conflicto de estado o de idempotencia | Igual: conflicto con el estado actual del recurso (cancelar algo ya despachado) o `Idempotency-Key` con hash distinto |
-| `422` | No se usa | Solicitud bien formada que viola una regla de negocio (sin remitente predeterminado válido, remitente desconectado, variables de plantilla incompletas, límite de aplicación mayor que el de la organización) |
+| Código | A. Sin 422                               | B. Con 422 (propuesta)                                                                                                                                                                                        |
+| ------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `400`  | Esquema, formato **y** reglas de negocio | Solo esquema/sintaxis/formato (campo requerido, tipo, longitud, enum)                                                                                                                                         |
+| `409`  | Conflicto de estado o de idempotencia    | Igual: conflicto con el estado actual del recurso (cancelar algo ya despachado) o `Idempotency-Key` con hash distinto                                                                                         |
+| `422`  | No se usa                                | Solicitud bien formada que viola una regla de negocio (sin remitente predeterminado válido, remitente desconectado, variables de plantilla incompletas, límite de aplicación mayor que el de la organización) |
 
 ### Recomendación
 
@@ -246,7 +246,7 @@ Determina si se crea `applications.timezone_override`. **Bloqueante menor para l
 
 > **Aprobada el 2026-11-15:** se mantienen las variables `NOTIFICATIONS_API_HOST`, `NOTIFICATIONS_ADMIN_HOST` y `NOTIFICATIONS_WEBHOOKS_HOST`. Los nombres DNS reales siguen sin fijar (dato de infraestructura, no decisión abierta). Traefik sigue siendo externo.
 
-Las propuestas de [docker.md](../deployment/docker.md) (`api-notifications.<dominio>`…) y [environment-decisions.md](../deployment/environment-decisions.md) (`notifications-api.<dominio>`…) diferían. Ninguna está confirmada. La documentación se unificó con variables (`NOTIFICATIONS_API_HOST`, `NOTIFICATIONS_ADMIN_HOST`, `NOTIFICATIONS_WEBHOOKS_HOST`). *(Histórico; sigue sin fijarse, como dato de infraestructura:)* nombres DNS reales, dominio raíz y si los webhooks usan un subdominio propio. `openapi.yaml` conserva su URL de ejemplo (`notifications-api.example.com`), marcada como propuesta.
+Las propuestas de [docker.md](../deployment/docker.md) (`api-notifications.<dominio>`…) y [environment-decisions.md](../deployment/environment-decisions.md) (`notifications-api.<dominio>`…) diferían. Ninguna está confirmada. La documentación se unificó con variables (`NOTIFICATIONS_API_HOST`, `NOTIFICATIONS_ADMIN_HOST`, `NOTIFICATIONS_WEBHOOKS_HOST`). _(Histórico; sigue sin fijarse, como dato de infraestructura:)_ nombres DNS reales, dominio raíz y si los webhooks usan un subdominio propio. `openapi.yaml` conserva su URL de ejemplo (`notifications-api.example.com`), marcada como propuesta.
 
 ---
 
@@ -254,7 +254,7 @@ Las propuestas de [docker.md](../deployment/docker.md) (`api-notifications.<domi
 
 > **Aprobada el 2026-11-15:** una imagen por host (`notification-api`, `notification-worker`, `notification-scheduler`), publicadas en GHCR.
 
-[compose-topology.md](../deployment/compose-topology.md) deja abierto si API y Worker comparten imagen. Se han **preparado** (sin decidir) Dockerfiles independientes por host: `src/NotificationService.{Api,Worker,Scheduler}/Dockerfile`. **Recomendación:** una imagen por host. Cada una lleva solo su runtime (`aspnet` para la API, `runtime` para Worker y Scheduler), escala por separado y tiene una superficie menor. *(Texto histórico: aprobada el 2026-11-15, ver arriba.)*
+[compose-topology.md](../deployment/compose-topology.md) deja abierto si API y Worker comparten imagen. Se han **preparado** (sin decidir) Dockerfiles independientes por host: `src/NotificationService.{Api,Worker,Scheduler}/Dockerfile`. **Recomendación:** una imagen por host. Cada una lleva solo su runtime (`aspnet` para la API, `runtime` para Worker y Scheduler), escala por separado y tiene una superficie menor. _(Texto histórico: aprobada el 2026-11-15, ver arriba.)_
 
 ---
 

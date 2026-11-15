@@ -4,14 +4,14 @@
 
 ## Inventario verificado
 
-| Archivo | Hallazgo | Uso para el nuevo diseño |
-|---|---|---|
-| `docker-compose.yml` | Docker Mailserver 17.0.0, SMSGate `latest`, Evolution API v2.3.7, MariaDB 11, PostgreSQL 16, Redis 7, MinIO y Cloudflared | Evidencia de versiones/tags y topología histórica, no configuración de producción aprobada |
-| `src/adapters/WhatsAppEvolutionAdapter.ts` | Envío de texto y media por Evolution; `apikey`; rutas `sendText` y `sendMedia`; instancia configurable | Referencia funcional para el adaptador .NET |
-| `src/queues/workers/whatsapp.worker.ts` | BullMQ sobre Redis, concurrencia 1, límite 1 cada 4 segundos, auditoría y registro del proveedor `EvolutionAPI-v2.3.7` | Referencia de comportamiento legado; no sustituye la decisión nueva de RabbitMQ |
-| `src/adapters/SmsGateAdapter.ts` | `POST /message`, Basic Auth, `message`, `phoneNumbers`, `simNumber`, respuesta `id` | Contrato legado a validar contra la versión real de SMSGate |
-| `src/adapters/SmtpPostfixAdapter.ts` | Nodemailer, perfiles SMTP y adjuntos; cifrado ZIP_AES256/PGP | Referencia de capacidades, no garantía de entrega ni de tracking |
-| `src/api/v1/webhook.controller.ts` | Archivo vacío | No existe receptor webhook implementado en la fuente inspeccionada |
+| Archivo                                    | Hallazgo                                                                                                                  | Uso para el nuevo diseño                                                                   |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `docker-compose.yml`                       | Docker Mailserver 17.0.0, SMSGate `latest`, Evolution API v2.3.7, MariaDB 11, PostgreSQL 16, Redis 7, MinIO y Cloudflared | Evidencia de versiones/tags y topología histórica, no configuración de producción aprobada |
+| `src/adapters/WhatsAppEvolutionAdapter.ts` | Envío de texto y media por Evolution; `apikey`; rutas `sendText` y `sendMedia`; instancia configurable                    | Referencia funcional para el adaptador .NET                                                |
+| `src/queues/workers/whatsapp.worker.ts`    | BullMQ sobre Redis, concurrencia 1, límite 1 cada 4 segundos, auditoría y registro del proveedor `EvolutionAPI-v2.3.7`    | Referencia de comportamiento legado; no sustituye la decisión nueva de RabbitMQ            |
+| `src/adapters/SmsGateAdapter.ts`           | `POST /message`, Basic Auth, `message`, `phoneNumbers`, `simNumber`, respuesta `id`                                       | Contrato legado a validar contra la versión real de SMSGate                                |
+| `src/adapters/SmtpPostfixAdapter.ts`       | Nodemailer, perfiles SMTP y adjuntos; cifrado ZIP_AES256/PGP                                                              | Referencia de capacidades, no garantía de entrega ni de tracking                           |
+| `src/api/v1/webhook.controller.ts`         | Archivo vacío                                                                                                             | No existe receptor webhook implementado en la fuente inspeccionada                         |
 
 ## Detalles de Evolution confirmados por el código
 

@@ -21,7 +21,7 @@ tests/
   NotificationService.Api.Tests/
   NotificationService.Worker.Tests/
   NotificationService.Architecture.Tests/
-docs/
+docs/          (incluye docs/testing/ con la estrategia de pruebas de integración)
 deploy/        (previsto para Compose/manifiestos; aún no creado)
 ```
 

@@ -12,6 +12,7 @@
 ## Cuotas y protección contra abuso
 
 Configurar por organización, aplicación, remitente y canal:
+
 - mensajes por día y mes;
 - solicitudes API por minuto;
 - concurrencia máxima por instancia;
@@ -24,16 +25,16 @@ Registrar período, unidad, límite, consumo, zona horaria y política de exceso
 
 ## Retención inicial
 
-| Dato | Retención |
-|---|---:|
-| Notificaciones y estados | 12 meses |
-| Intentos de entrega | 12 meses |
-| Eventos/webhooks recibidos | 90 días |
-| Logs técnicos | 30 días |
-| Auditoría administrativa | 12 meses |
-| Registros de idempotencia | 7 días |
-| Adjuntos | 90 días después de finalizar el envío |
-| Métricas agregadas | 24 meses |
+| Dato                       |                             Retención |
+| -------------------------- | ------------------------------------: |
+| Notificaciones y estados   |                              12 meses |
+| Intentos de entrega        |                              12 meses |
+| Eventos/webhooks recibidos |                               90 días |
+| Logs técnicos              |                               30 días |
+| Auditoría administrativa   |                              12 meses |
+| Registros de idempotencia  |                                7 días |
+| Adjuntos                   | 90 días después de finalizar el envío |
+| Métricas agregadas         |                              24 meses |
 
 Sujeto a obligaciones legales, contratos y necesidades de auditoría.
 

@@ -1,15 +1,16 @@
 # Matriz de cierre de contratos de webhooks
 
 ## Principio de diseño
+
 Cada proveedor conserva su contrato externo y su adaptador propio. El adaptador valida autenticidad, identifica la cuenta/instancia, persiste el evento recibido y lo transforma a un evento interno canónico. No asumir que los proveedores entregan los mismos estados ni la misma semántica.
 
 ## Estado por proveedor
 
-| Proveedor | Decisión/evidencia | Pendiente |
-|---|---|---|
-| Evolution API | `evoapicloud/evolution-api:v2.3.7` fijado en `Notificaciones-master/docker-compose.yml`; envío de texto/media implementado en `WhatsAppEvolutionAdapter.ts` | Digest de imagen realmente desplegado; eventos habilitados; URL/header de webhook; payloads anonimizados; semántica de reintentos y estados |
-| SMSGate Server | `ghcr.io/android-sms-gateway/server:latest` en Compose; MariaDB 11; modo privado; túnel Cloudflare | Fijar release/digest; versión app Android; alinear autenticación; confirmar endpoint y callbacks en esa versión |
-| Docker Mailserver | `ghcr.io/docker-mailserver/docker-mailserver:17.0.0` en Compose | Digest desplegado, configuración DNS y mecanismo de bounces/DSN que se adoptará |
+| Proveedor         | Decisión/evidencia                                                                                                                                          | Pendiente                                                                                                                                   |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Evolution API     | `evoapicloud/evolution-api:v2.3.7` fijado en `Notificaciones-master/docker-compose.yml`; envío de texto/media implementado en `WhatsAppEvolutionAdapter.ts` | Digest de imagen realmente desplegado; eventos habilitados; URL/header de webhook; payloads anonimizados; semántica de reintentos y estados |
+| SMSGate Server    | `ghcr.io/android-sms-gateway/server:latest` en Compose; MariaDB 11; modo privado; túnel Cloudflare                                                          | Fijar release/digest; versión app Android; alinear autenticación; confirmar endpoint y callbacks en esa versión                             |
+| Docker Mailserver | `ghcr.io/docker-mailserver/docker-mailserver:17.0.0` en Compose                                                                                             | Digest desplegado, configuración DNS y mecanismo de bounces/DSN que se adoptará                                                             |
 
 Meta WhatsApp Cloud API no se implementa en esta etapa, pero queda como proveedor futuro previsto por ADR-0004. No es un bloqueo del lanzamiento inicial.
 
@@ -36,6 +37,7 @@ Meta WhatsApp Cloud API no se implementa en esta etapa, pero queda como proveedo
 ## Contrato interno normalizado
 
 El modelo canónico debe contemplar, como mínimo:
+
 - `provider`: `evolution`, `android_sms_gateway`, `postfix_smtp`.
 - `provider_account_id` y, si aplica, `provider_instance_id`.
 - `event_type` interno normalizado.
@@ -62,6 +64,7 @@ El modelo canónico debe contemplar, como mínimo:
 ## Criterio para cerrar cada contrato
 
 Un contrato se considera cerrado cuando se cuenta con:
+
 - versión exacta/digest fijado;
 - documentación oficial de esa versión;
 - configuración real de webhook o mecanismo alternativo de consulta;

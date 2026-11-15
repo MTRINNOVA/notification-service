@@ -32,10 +32,10 @@ Las versiones de los paquetes NuGet se gestionan de forma centralizada en [Direc
 
 ## Configuración
 
-| Clave | Variable de entorno | Uso |
-|---|---|---|
-| `ConnectionStrings:DefaultConnection` | `ConnectionStrings__DefaultConnection` | PostgreSQL (Api, Worker, Scheduler). Obligatoria; única convención |
-| `OpenApi:Enabled` | `OpenApi__Enabled` | Expone OpenAPI/Swagger UI fuera de Development (por defecto `false`) |
+| Clave                                 | Variable de entorno                    | Uso                                                                  |
+| ------------------------------------- | -------------------------------------- | -------------------------------------------------------------------- |
+| `ConnectionStrings:DefaultConnection` | `ConnectionStrings__DefaultConnection` | PostgreSQL (Api, Worker, Scheduler). Obligatoria; única convención   |
+| `OpenApi:Enabled`                     | `OpenApi__Enabled`                     | Expone OpenAPI/Swagger UI fuera de Development (por defecto `false`) |
 
 Los `appsettings*.json` **no** contienen credenciales. Para desarrollo local, usar User Secrets: los tres hosts comparten el mismo `UserSecretsId`, así que basta configurarlo una vez:
 
@@ -57,6 +57,8 @@ dotnet list NotificationService.sln package --outdated
 dotnet list NotificationService.sln package --vulnerable --include-transitive
 ```
 
+Las pruebas actuales (unitarias, de composición y de arquitectura) no requieren Docker. A partir de la Fase 2, las pruebas de integración de persistencia usarán **Testcontainers con PostgreSQL** y necesitarán Docker en ejecución ([integration-testing-postgresql.md](docs/testing/integration-testing-postgresql.md)).
+
 Ejecutar hosts (requieren la cadena de conexión configurada):
 
 ```bash
@@ -67,13 +69,13 @@ dotnet run --project src/NotificationService.Scheduler
 
 ## Endpoints técnicos de la API
 
-| Ruta | Descripción |
-|---|---|
-| `GET /` | Identificación del servicio |
-| `GET /health/live` | Liveness: el proceso está en ejecución |
-| `GET /health/ready` | Readiness: comprobaciones de dependencias (aún no hay dependencias implementadas) |
-| `GET /openapi/v1.json` | Documento OpenAPI 3.1 generado (Development, o `OpenApi:Enabled=true`) |
-| `GET /swagger` | Swagger UI (mismas condiciones) |
+| Ruta                   | Descripción                                                                       |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| `GET /`                | Identificación del servicio                                                       |
+| `GET /health/live`     | Liveness: el proceso está en ejecución                                            |
+| `GET /health/ready`    | Readiness: comprobaciones de dependencias (aún no hay dependencias implementadas) |
+| `GET /openapi/v1.json` | Documento OpenAPI 3.1 generado (Development, o `OpenApi:Enabled=true`)            |
+| `GET /swagger`         | Swagger UI (mismas condiciones)                                                   |
 
 El contrato normativo de la API es [docs/api/openapi.yaml](docs/api/openapi.yaml). El documento generado describe solo lo implementado.
 
@@ -96,4 +98,5 @@ Aún no hay Docker Compose. Traefik es externo y nunca forma parte de este repos
 - Decisiones aprobadas: [docs/adr/](docs/adr/), [DECISIONS-v1.5.md](docs/project/DECISIONS-v1.5.md).
 - Registro de las decisiones PD-01 a PD-08 (todas aprobadas el 2026-11-15): [PENDING-DECISIONS.md](docs/project/PENDING-DECISIONS.md); cierre: [decision-closure-report.md](docs/operations/decision-closure-report.md).
 - Catálogo de códigos de error de la API: [error-codes.md](docs/api/error-codes.md).
+- Decisiones técnicas TP-02 y TP-15 a TP-20: [decision-closure-report-tp15-tp20.md](docs/operations/decision-closure-report-tp15-tp20.md); bootstrap de `super_admin`: [super-admin-bootstrap.md](docs/operations/super-admin-bootstrap.md).
 - Pendientes técnicos: [technical-pending-register.md](docs/operations/technical-pending-register.md).
