@@ -42,6 +42,7 @@ Clean Architecture + Hexagonal (Ports and Adapters) — [ADR-0001](docs/adr/0001
 | Tema                      | Documento                                                                                                                                                                                                                                                                            |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Decisiones confirmadas    | [docs/project/DECISIONS-v1.5.md](docs/project/DECISIONS-v1.5.md), [docs/adr/](docs/adr/)                                                                                                                                                                                             |
+| Decisiones pendientes     | [docs/project/PENDING-DECISIONS.md](docs/project/PENDING-DECISIONS.md) (propuestas, **no** decisiones), [technical-pending-register.md](docs/operations/technical-pending-register.md)                                                                                                 |
 | Estructura y dependencias | [docs/architecture/project-structure.md](docs/architecture/project-structure.md), [hexagonal.md](docs/architecture/hexagonal.md), C4: [context](docs/architecture/c4-context.md), [containers](docs/architecture/c4-containers.md), [components](docs/architecture/c4-components.md) |
 | Datos                     | [docs/data/erd.md](docs/data/erd.md) (modelo lógico, requiere revisión antes de migraciones)                                                                                                                                                                                         |
 | API                       | [docs/api/openapi.yaml](docs/api/openapi.yaml) (contrato normativo), [api-design.md](docs/api/api-design.md), [endpoint-inventory.md](docs/api/endpoint-inventory.md)                                                                                                                |
@@ -60,15 +61,17 @@ Solución: [NotificationService.sln](NotificationService.sln). No crear proyecto
 src/
   NotificationService.Domain/          Common/ Entities/ ValueObjects/ Enums/ Events/ Exceptions/
   NotificationService.Application/     Abstractions/ (puertos, p.ej. Time/IClock) Features/ Behaviors/ Mappings/
-  NotificationService.Infrastructure/  Persistence/ Messaging/RabbitMQ/ Cache/ Storage/ Providers/ Security/ Configuration/ Time/
-  NotificationService.Api/             Endpoints/{Public,Management,Webhooks}/ Authentication/ Authorization/ Middleware/
-  NotificationService.Worker/          Consumers/ Handlers/ Retry/ DeadLetter/
-  NotificationService.Scheduler/       Jobs/ Services/
+  NotificationService.Infrastructure/  Common/ Configuration/ Persistence/ Messaging/RabbitMQ/ Cache/ Storage/ Providers/ Security/ Time/
+  NotificationService.Api/             Common/ Middleware/ Endpoints/{Public,Management,Webhooks}/ Authentication/ Authorization/  + Dockerfile
+  NotificationService.Worker/          Common/ Consumers/ Handlers/ Retry/ DeadLetter/  + Dockerfile
+  NotificationService.Scheduler/       Common/ Jobs/ Services/  + Dockerfile
 tests/
   NotificationService.{Domain,Application,Infrastructure,Api,Worker,Architecture}.Tests/
 ```
 
-Cada proyecto tiene un `*AssemblyMarker` en `Common/` usado por las pruebas de arquitectura. `Api`, `Worker` y `Scheduler` son adaptadores de entrada y _composition roots_.
+- Cada proyecto tiene un `*AssemblyMarker` en `Common/` usado por las pruebas de arquitectura. `Api`, `Worker` y `Scheduler` son adaptadores de entrada y _composition roots_.
+- Worker y Scheduler componen el host en `Common/*HostBuilderExtensions.cs` (`AddWorkerHost`/`AddSchedulerHost`); `Program.cs` solo construye y ejecuta. Registrar servicios ahí, no en `Program.cs`.
+- No existe `Scheduler.Tests`: sus pruebas de composición están en `Architecture.Tests` (TP-06). No crear proyectos nuevos sin autorización.
 
 ## 6. Dirección de dependencias
 
@@ -126,7 +129,7 @@ Domain no puede depender de: EF Core, Npgsql, RabbitMQ.Client, StackExchange.Red
 
 **Application:** un caso de uso = una responsabilidad; valida entradas; coordina dominio y puertos; define contratos de salida; devuelve resultados/errores de aplicación tipados; sin detalles HTTP (`IActionResult`, `HttpContext`, códigos HTTP) ni EF Core.
 
-**Infrastructure:** EF Core con Fluent API (`IEntityTypeConfiguration<T>`); migraciones solo aquí y solo en la fase autorizada; adaptadores de RabbitMQ, Redis, MinIO y proveedores; opciones validadas (`ValidateDataAnnotations` + `ValidateOnStart`, como `DatabaseOptions`); timeouts explícitos en toda llamada externa; resiliencia (reintentos/circuit breaker) solo donde el documento de mensajería/proveedor lo indique; los DTOs y excepciones de proveedores se traducen antes de salir del adaptador.
+**Infrastructure:** EF Core con Fluent API (`IEntityTypeConfiguration<T>`); migraciones solo aquí y solo en la fase autorizada; adaptadores de RabbitMQ, Redis, MinIO y proveedores; opciones validadas al iniciar (`IValidateOptions<T>` + `ValidateOnStart`, como `DatabaseOptions`/`DatabaseOptionsValidator`); timeouts explícitos en toda llamada externa; resiliencia (reintentos/circuit breaker) solo donde el documento de mensajería/proveedor lo indique; los DTOs y excepciones de proveedores se traducen antes de salir del adaptador.
 
 **Api:** endpoints delgados; DTOs de request/response propios (nunca entidades de dominio ni de EF); validación de solicitud; errores RFC 9457 (`application/problem+json` con `code` y `traceId`) mediante manejo centralizado (`GlobalExceptionMiddleware`/ProblemDetails); autenticación y autorización; versionado `/api/v1`; `X-Correlation-Id` aceptado o generado y devuelto; nunca exponer excepciones internas ni stack traces.
 
@@ -156,6 +159,7 @@ Contrato interno neutral; un adaptador por proveedor en `Infrastructure/Provider
 ## 11. Persistencia y versiones de paquetes
 
 - PostgreSQL es la fuente de verdad. EF Core y Npgsql solo en Infrastructure.
+- **Gestión centralizada:** todas las versiones NuGet están en [Directory.Packages.props](Directory.Packages.props) (`ManagePackageVersionsCentrally`). Los `.csproj` declaran `<PackageReference Include="..." />` **sin** `Version`; un paquete nuevo se añade primero al archivo central (y requiere justificación/autorización). `Architecture.Tests` hace fallar el build si hay versiones inline, prerelease o EF Core desalineado.
 - Versiones vigentes (validadas el 2026-11-15, todas estables):
 
 | Paquete                                          | Versión                                                                                                                        |
@@ -167,7 +171,7 @@ Contrato interno neutral; un adaptador por proveedor en `Infrastructure/Provider
 | Microsoft.EntityFrameworkCore.Design / dotnet-ef | aún no usados; cuando se autorice la fase de migraciones: misma versión que EF Core (10.0.x), dotnet-ef como herramienta local |
 
 - Reglas: misma versión mayor y menor en todos los paquetes EF Core; no mezclar EF Core 9 con Npgsql 10 ni viceversa; nada preview/alpha/beta/rc; no saltar a 11.x (corresponde a .NET 11; ADR-0008 fija .NET 10 LTS) sin ADR; no actualizar paquetes en lote ni "de paso"; revisar transitivos (`dotnet list package --include-transitive`) y vulnerabilidades (`--vulnerable`); documentar cada cambio de versión y su motivo.
-- No existe `Directory.Packages.props`: las versiones se declaran en cada `.csproj`. Si se adopta la gestión centralizada (pendiente de aprobación), todas las versiones pasan a ese archivo.
+- Cadena de conexión: **única** convención `ConnectionStrings:DefaultConnection` (`ConnectionStrings__DefaultConnection` en entorno), leída por `DatabaseOptions` y validada al iniciar (`DatabaseOptionsValidator`, `ValidateOnStart`). No reintroducir `Database:ConnectionString` ni otras claves.
 - Migraciones: solo en la fase autorizada, revisadas, compatibles con despliegue expand/contract y ejecutadas como tarea única de release, nunca automáticamente por cada réplica.
 - No modificar el modelo de datos sin que el ERD lo respalde. JSONB solo para payloads/configuración variable.
 
@@ -185,7 +189,7 @@ Detalle en [rabbitmq-outbox.md](docs/messaging/rabbitmq-outbox.md).
 
 ## 13. Seguridad
 
-- Sin secretos en código, `appsettings*.json` versionados, tests ni mensajes. Los valores de `appsettings.json` son solo para desarrollo local. No subir `.env` reales; `.env.example` solo con nombres y valores ficticios.
+- Sin secretos en código, `appsettings*.json` versionados, tests ni mensajes. Los `appsettings*.json` no llevan credenciales, ni siquiera de ejemplo. Secretos locales: User Secrets (los tres hosts comparten `UserSecretsId`) o variables de entorno. No subir `.env` reales; `.env.example` solo con placeholders ficticios. Los mensajes de validación de configuración nunca incluyen el valor validado.
 - Panel: access JWT (~15 min) validando firma, issuer, audience, expiración y `kid`; refresh token opaco, rotativo, guardado como hash, en cookie `HttpOnly` + `Secure` + `SameSite`; detección de reutilización; protección CSRF; contraseñas Argon2id.
 - Aplicaciones: `X-API-Key` por aplicación, guardada como hash con prefijo, mostrada una sola vez, con scopes, expiración, rotación y revocación. Las API Keys no heredan permisos humanos.
 - Autorización en el backend en cada operación (RBAC + ámbito); el frontend no es control de seguridad. Pruebas negativas obligatorias contra IDOR y acceso cruzado.
@@ -209,7 +213,8 @@ Detalle en [rabbitmq-outbox.md](docs/messaging/rabbitmq-outbox.md).
 - Toda funcionalidad nueva incluye pruebas; las invariantes de dominio siempre.
 - Usar `IClock` para pruebas deterministas de tiempo, cuotas y zonas horarias.
 - Compilar no es terminar. No eliminar ni desactivar pruebas para que pase el build.
-- Los archivos `UnitTest1.cs` actuales son pruebas de base; al añadir pruebas reales, nombrar los archivos por la clase o comportamiento probado.
+- Nombrar los archivos de prueba por la clase o comportamiento probado (`*Tests.cs`). Las pruebas de fundación actuales (DI, validación de configuración, composición de hosts, logging, middleware, reglas de proyecto) deben seguir en verde; no eliminarlas para que pase un build.
+- Pruebas de host API: `WebApplicationFactory` con configuración en memoria (`ApiTestFactory`); hosts Worker/Scheduler: `Host.CreateApplicationBuilder` con `DisableDefaults` y `IStartupValidator`. Ninguna prueba de fundación depende de servicios externos.
 
 ## 15. Convenciones de código
 
@@ -228,16 +233,22 @@ Detalle en [rabbitmq-outbox.md](docs/messaging/rabbitmq-outbox.md).
 ```bash
 dotnet --info
 dotnet restore NotificationService.sln
-dotnet build NotificationService.sln
-dotnet test NotificationService.sln
+dotnet build NotificationService.sln --configuration Release
+dotnet test NotificationService.sln --configuration Release
 dotnet list NotificationService.sln package --include-transitive
 dotnet list NotificationService.sln package --outdated
 dotnet list NotificationService.sln package --vulnerable --include-transitive
 
-dotnet run --project src/NotificationService.Api        # GET /, /health, /swagger
+# Requieren ConnectionStrings:DefaultConnection (User Secrets o entorno)
+dotnet run --project src/NotificationService.Api        # GET /, /health/live, /health/ready, /openapi/v1.json, /swagger (Development)
 dotnet run --project src/NotificationService.Worker
 dotnet run --project src/NotificationService.Scheduler
+
+docker build -f src/NotificationService.Api/Dockerfile .  # contexto: raíz (igual para Worker/Scheduler)
 ```
+
+- Health: `/health/live` solo comprueba el proceso; `/health/ready` incluye únicamente checks con la etiqueta `HealthCheckTags.Ready`. Nunca registrar un check que devuelva *Healthy* sin comprobar realmente la dependencia.
+- OpenAPI: documento generado con `Microsoft.AspNetCore.OpenApi` (3.1) + Swagger UI de Swashbuckle, solo en Development o con `OpenApi:Enabled=true`. El contrato normativo sigue siendo `docs/api/openapi.yaml`.
 
 No ejecutar `dotnet ef migrations add` ni `dotnet ef database update` fuera de la fase autorizada.
 
@@ -257,18 +268,29 @@ No ejecutar `dotnet ef migrations add` ni `dotnet ef database update` fuera de l
 6. No generar migraciones fuera de la fase autorizada.
 7. No declarar terminado algo incompleto; listar lo pendiente.
 8. Problema fuera de alcance: documentarlo, explicar impacto, proponer solución y **esperar autorización** antes de ampliar el alcance.
+9. No modificar el estado de un ADR ni resolver una decisión pendiente (§19) sin aprobación explícita.
+10. Fase actual: fundación saneada; **Fase 2 (persistencia y modelo de datos) no autorizada**. No crear entidades, `DbSet`, configuraciones Fluent API, repositorios ni migraciones hasta que el usuario la autorice.
 
-## 19. Contradicciones y pendientes conocidos
+## 19. Contradicciones y decisiones pendientes
 
-No convertir en regla ninguno de estos puntos hasta que se resuelvan en `docs/`:
+Las contradicciones conocidas y sus propuestas están en [docs/project/PENDING-DECISIONS.md](docs/project/PENDING-DECISIONS.md). Mientras un punto siga **Pendiente**:
 
-- Nombres de roles: `rbac-matrix.md` usa `org_admin`, `operator`, `viewer`; ADR-0011 usa `organization_admin`, `application_admin`, `operator`, `viewer`.
-- Configuración de conexión: el código usa la sección `Database:ConnectionString`; `compose-topology.md` documenta `ConnectionStrings__DefaultConnection`.
-- Estados de entrega: `rabbitmq-outbox.md` no incluye el estado `UNKNOWN/RECONCILIATION_REQUIRED` de `provider-contracts-v1.5.md`.
-- Puerto de proveedor: `hexagonal.md` define `INotificationProvider` genérico; ADR-0004 y `provider-adapters.md` proponen `IWhatsAppProvider` + `IWhatsAppConnectionManager`.
-- Uso de `422` frente a `400`/`409` para errores de negocio ("si se adopta" en `api-design.md`).
-- Subdominios propuestos distintos en `docker.md` y `environment-decisions.md` (ninguno confirmado).
-- `timezone_override` de aplicación: permitido solo "si la política de producto lo habilita" (política no definida).
+- No implementar ninguna de sus alternativas, ni siquiera la recomendada.
+- No convertirlo en regla, código, migración, enum ni contrato OpenAPI.
+- Si una tarea depende de él, detener esa parte, informar y continuar con lo independiente.
+
+| ID | Tema | Bloquea Fase 2 |
+|---|---|---|
+| PD-01 | Roles (`organization_admin` vs `org_admin`, `application_admin`, almacenamiento de `super_admin`) | Sí |
+| PD-02 | Máquina de estados notificación/entrega/intento y resultado ambiguo | Sí |
+| PD-03 | Puertos de proveedores especializados vs `INotificationProvider` | No |
+| PD-04 | Uso de 400 / 409 / 422 | No |
+| PD-05 | `timezone_override` de aplicación | Sí (columna) |
+| PD-06 | Subdominios/DNS (usar `NOTIFICATIONS_*_HOST`) | No |
+| PD-07 | Estrategia de imágenes Docker | No |
+| PD-08 | 409/429 ausentes en `openapi.yaml` | No |
+
+Una decisión se considera aprobada solo cuando el usuario la aprueba explícitamente **y** se actualiza el documento fuente (ADR, ERD, OpenAPI...).
 
 ## 20. Checklist antes de entregar cambios
 
@@ -280,5 +302,6 @@ No convertir en regla ninguno de estos puntos hasta que se resuelvan en `docs/`:
 - [ ] OpenAPI y documentación actualizados si cambió el contrato.
 - [ ] Sin migraciones ni cambios de modelo no autorizados.
 - [ ] Paquetes coherentes y estables; cambios de versión documentados.
-- [ ] `dotnet restore`, `dotnet build` (0 errores, sin advertencias nuevas) y `dotnet test` ejecutados y en verde.
+- [ ] Ninguna decisión pendiente (§19) implementada ni asumida.
+- [ ] `dotnet restore`, `dotnet build -c Release` (0 errores, sin advertencias nuevas) y `dotnet test -c Release` ejecutados y en verde.
 - [ ] Informe con archivos modificados, comandos ejecutados con resultados reales y pendientes.

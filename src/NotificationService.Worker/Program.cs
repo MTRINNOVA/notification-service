@@ -1,15 +1,8 @@
-using NotificationService.Application;
-using NotificationService.Infrastructure;
-using NotificationService.Worker;
+using NotificationService.Worker.Common;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Logging.ClearProviders();
-builder.Logging.AddJsonConsole();
-
-builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddHostedService<WorkerService>();
+builder.AddWorkerHost();
 
 var host = builder.Build();
 host.Run();

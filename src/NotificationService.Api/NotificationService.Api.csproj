@@ -2,13 +2,15 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Compartido por Api, Worker y Scheduler: un único secrets.json local para desarrollo. -->
+    <UserSecretsId>notification-service-2d17e6d9-32ed-4bea-a30e-f314b22a76ff</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.0.0" />
+    <!-- Generación del documento OpenAPI 3.1 en tiempo de ejecución. -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <!-- Solo la interfaz Swagger UI; el generador de Swashbuckle no se usa. -->
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
   </ItemGroup>
 
   <ItemGroup>

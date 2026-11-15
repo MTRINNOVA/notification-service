@@ -30,11 +30,25 @@ Evolution y Postfix pueden tener Compose independiente. SMS Gateway normalmente 
 - `notification_providers`: Worker y proveedores autohospedados.
 - No declarar `notification_internal` como `internal: true` si contenedores de esa red necesitan salida a Internet. Para mayor aislamiento, crear red de datos interna y una red de egress separada.
 
-## Dominios sugeridos
+## Dominios (no confirmados)
 
-- `api-notifications.<dominio>` -> API
-- `admin-notifications.<dominio>` -> Admin
-- `hooks-notifications.<dominio>` -> API/webhooks, opcionalmente router separado
+Los nombres DNS reales están pendientes ([PD-06](../project/PENDING-DECISIONS.md#pd-06-subdominios-y-dns)). Compose y labels de Traefik deben usar estas variables, nunca nombres fijos:
+
+| Variable | Destino |
+|---|---|
+| `NOTIFICATIONS_API_HOST` | API pública y de administración |
+| `NOTIFICATIONS_ADMIN_HOST` | Panel administrativo (repositorio `notification-admin`) |
+| `NOTIFICATIONS_WEBHOOKS_HOST` | Recepción de webhooks (puede apuntar a la API con un router separado) |
+
+## Imágenes
+
+Dockerfiles preparados por host (contexto de build: raíz del repositorio). La estrategia definitiva está pendiente ([PD-07](../project/PENDING-DECISIONS.md#pd-07-estrategia-de-imágenes-docker)):
+
+- `src/NotificationService.Api/Dockerfile` (runtime `aspnet`, puerto 8080)
+- `src/NotificationService.Worker/Dockerfile` (runtime `runtime`)
+- `src/NotificationService.Scheduler/Dockerfile` (runtime `runtime`)
+
+Todos usan multi-stage con build en Release, SDK fijado a `global.json`, restore cacheable y usuario no-root (`$APP_UID`). No incluyen secretos: `.dockerignore` excluye `.env*`, `secrets.json`, `bin/`, `obj/`, `tests/` y `docs/`.
 
 ## Datos persistentes
 

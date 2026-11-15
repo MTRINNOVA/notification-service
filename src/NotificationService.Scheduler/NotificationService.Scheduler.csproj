@@ -2,17 +2,17 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>dotnet-NotificationService.Scheduler-df102dd8-f8d2-4ead-a013-c289bf2d45ae</UserSecretsId>
+    <!-- Compartido por Api, Worker y Scheduler: un único secrets.json local para desarrollo. -->
+    <UserSecretsId>notification-service-2d17e6d9-32ed-4bea-a30e-f314b22a76ff</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.15" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NotificationService.Application\NotificationService.Application.csproj" />
     <ProjectReference Include="..\NotificationService.Infrastructure\NotificationService.Infrastructure.csproj" />
   </ItemGroup>
+
 </Project>

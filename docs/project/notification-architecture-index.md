@@ -23,5 +23,11 @@
 
 ## Decisiones y cambios
 
-- `DECISIONS-v1.5.md`
+- `DECISIONS-v1.5.md` (decisiones aprobadas)
+- `PENDING-DECISIONS.md` (propuestas **pendientes de aprobación**; no son decisiones)
 - `CHANGELOG-v1.5.md`
+
+## Operación del repositorio
+
+- Saneamiento de la fundación: `notification-service/docs/operations/repository-sanitization-report.md`
+- Pendientes técnicos: `notification-service/docs/operations/technical-pending-register.md`

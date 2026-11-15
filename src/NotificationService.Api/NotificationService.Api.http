@@ -1,6 +1,19 @@
 @NotificationService.Api_HostAddress = http://localhost:5189
 
-GET {{NotificationService.Api_HostAddress}}/weatherforecast/
+GET {{NotificationService.Api_HostAddress}}/
+Accept: application/json
+
+###
+
+GET {{NotificationService.Api_HostAddress}}/health/live
+
+###
+
+GET {{NotificationService.Api_HostAddress}}/health/ready
+
+###
+
+GET {{NotificationService.Api_HostAddress}}/openapi/v1.json
 Accept: application/json
 
 ###

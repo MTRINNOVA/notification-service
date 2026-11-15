@@ -7,7 +7,7 @@ Las reglas del proyecto están en `AGENTS.md` (importado arriba). Este archivo s
 ## Antes de modificar código
 
 - Leer los documentos de `docs/` relacionados con la tarea (ver §4 de `AGENTS.md`) y el código existente afectado. No suponer contenido sin abrir el archivo.
-- Confirmar la fase y el alcance solicitados. Si la solicitud es ambigua o choca con una decisión aprobada o con una contradicción de §19, preguntar antes de implementar.
+- Confirmar la fase y el alcance solicitados. Si la solicitud es ambigua o choca con una decisión aprobada o con una decisión pendiente de §19 (`docs/project/PENDING-DECISIONS.md`), preguntar antes de implementar.
 - No cambiar decisiones aprobadas, añadir paquetes ni ampliar el alcance sin autorización explícita en la conversación. La autorización de una tarea no se extiende a la siguiente.
 
 ## Durante el trabajo

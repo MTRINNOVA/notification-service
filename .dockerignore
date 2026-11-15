@@ -1,0 +1,16 @@
+# Contexto mínimo para las imágenes: solo src/ y la configuración de build de la raíz.
+**/bin/
+**/obj/
+**/TestResults/
+**/*.user
+**/.vs/
+**/.vscode/
+**/.idea/
+**/secrets.json
+**/.env
+**/.env.*
+.git/
+.github/
+tests/
+docs/
+*.md

@@ -49,6 +49,8 @@ Implementaciones de persistencia, mensajería, caché, almacenamiento, cifrado y
 
 ## Contrato de proveedor
 
+> **Pendiente de aprobación ([PD-03](../project/PENDING-DECISIONS.md#pd-03-puertos-de-proveedores)):** se propone sustituir el contrato común siguiente por puertos especializados por canal (`IWhatsAppProvider`, `IWhatsAppConnectionManager`, `IEmailProvider`, `ISmsProvider`) más interfaces opcionales de capacidad, en línea con ADR-0004. Hasta su aprobación no se implementa ningún adaptador.
+
 Todo adaptador implementa un contrato común para enviar y, cuando proceda, administrar conexión:
 
 - `ProviderCode`

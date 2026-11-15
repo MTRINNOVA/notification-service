@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using NotificationService.Application.Abstractions.Time;
 using NotificationService.Infrastructure.Configuration;
@@ -16,9 +16,10 @@ public static class DependencyInjection
     {
         services
             .AddOptions<DatabaseOptions>()
-            .Bind(configuration.GetSection(DatabaseOptions.SectionName))
-            .ValidateDataAnnotations()
+            .Configure(options =>
+                options.ConnectionString = configuration.GetConnectionString(DatabaseOptions.ConnectionStringName) ?? string.Empty)
             .ValidateOnStart();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<DatabaseOptions>, DatabaseOptionsValidator>());
 
         services.AddDbContext<NotificationDbContext>((serviceProvider, options) =>
         {
@@ -26,11 +27,11 @@ public static class DependencyInjection
             options.UseNpgsql(databaseOptions.ConnectionString);
         });
 
-        services.AddScoped<IClock, SystemClock>();
+        services.AddSingleton<IClock, SystemClock>();
 
-        services
-            .AddHealthChecks()
-            .AddCheck("infrastructure-self", () => HealthCheckResult.Healthy());
+        // Punto de registro para comprobaciones reales de dependencias (p.ej. PostgreSQL en Fase 2).
+        // No se registra ninguna comprobación que declare saludable una dependencia no verificada.
+        services.AddHealthChecks();
 
         return services;
     }

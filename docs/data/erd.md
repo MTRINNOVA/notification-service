@@ -131,6 +131,6 @@ erDiagram
 5. Se recomiendan claves foráneas compuestas (`organization_id`, `id`) en recursos tenant-owned para impedir referencias cruzadas.
 6. PostgreSQL RLS puede añadirse como defensa adicional; el contexto debe establecerse por transacción y limpiarse al devolver conexiones al pool.
 7. La cuota se reserva atómicamente al aceptar una solicitud; una repetición idempotente no incrementa el contador.
-8. Los instantes se almacenan en UTC. `organizations.timezone` se utiliza para calcular periodos diarios; `applications.timezone_override` solo se permite si la política de producto lo habilita.
+8. Los instantes se almacenan en UTC. `organizations.timezone` se utiliza para calcular periodos diarios; `applications.timezone_override` solo se permite si la política de producto lo habilita (política **pendiente de aprobación**: [PD-05](../project/PENDING-DECISIONS.md#pd-05-timezone_override-de-aplicación)).
 9. La eliminación de cuentas/proveedores debe ser lógica y auditable cuando existan notificaciones históricas asociadas.
 10. Este modelo requiere revisión de índices, restricciones parciales y tipos exactos antes de generar migraciones EF Core.

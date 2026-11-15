@@ -14,4 +14,18 @@ public sealed class ApplicationFoundationTests
 
         Assert.Same(services, returned);
     }
+
+    [Fact]
+    public void AddApplication_ShouldBuildAValidContainer()
+    {
+        var services = new ServiceCollection().AddApplication();
+
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+
+        Assert.NotNull(provider);
+    }
 }

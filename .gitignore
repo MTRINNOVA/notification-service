@@ -1,2 +1,60 @@
-bin/
-obj/
+# ---------------------------------------------------------------
+# Build y publicación
+# ---------------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+[Pp]ublish/
+artifacts/
+*.nupkg
+*.snupkg
+
+# ---------------------------------------------------------------
+# Pruebas y cobertura
+# ---------------------------------------------------------------
+[Tt]est[Rr]esults/
+coverage/
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+
+# ---------------------------------------------------------------
+# Secretos y configuración local (nunca versionar)
+# ---------------------------------------------------------------
+.env
+.env.*
+!.env.example
+secrets.json
+appsettings.Local.json
+appsettings.*.Local.json
+*.pfx
+*.p12
+*.pem
+*.key
+
+# ---------------------------------------------------------------
+# IDE y sistema operativo
+# ---------------------------------------------------------------
+.vs/
+.idea/
+*.user
+*.suo
+*.userprefs
+*.DotSettings.user
+# .vscode/settings.json se comparte (solución por defecto); el resto es local.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# ---------------------------------------------------------------
+# Temporales y logs
+# ---------------------------------------------------------------
+*.tmp
+*.temp
+*.swp
+*~
+*.log
+logs/

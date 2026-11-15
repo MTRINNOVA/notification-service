@@ -104,7 +104,7 @@ Los payloads externos son específicos de versión/proveedor. Validar autenticid
 - `409`: conflicto de estado o idempotencia.
 - `413`: archivo demasiado grande.
 - `415`: tipo de contenido no permitido.
-- `422`: regla de negocio no satisfecha, si se adopta distinto de `400` para validación semántica.
+- `422`: regla de negocio no satisfecha, si se adopta distinto de `400` para validación semántica. **Pendiente de aprobación:** [PD-04](../project/PENDING-DECISIONS.md#pd-04-uso-de-400-409-y-422). Además, `openapi.yaml` aún no declara `409` ni `429` ([PD-08](../project/PENDING-DECISIONS.md#pd-08-respuestas-409-y-429-ausentes-en-openapiyaml)).
 - `429`: cuota/rate limit excedido; incluir `Retry-After` cuando sea calculable.
 - `500`: error inesperado; `503`: dependencia temporalmente no disponible.
 

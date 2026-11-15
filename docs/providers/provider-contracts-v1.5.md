@@ -35,7 +35,7 @@ Este documento separa evidencia del ZIP `Notificaciones-master.zip`, decisiones 
 - Validar tenant al resolver webhook: `providerAccountId` debe mapear a una cuenta interna activa.
 - El evento externo se guarda antes de responder éxito; después se transforma a evento interno.
 - `data.key.id` prueba aceptación/identificación del mensaje en el proveedor, no entrega final.
-- Resultado de envío ambiguo se marca `UNKNOWN/RECONCILIATION_REQUIRED`; no reintentar ciegamente.
+- Resultado de envío ambiguo se marca `UNKNOWN/RECONCILIATION_REQUIRED`; no reintentar ciegamente. (Nombre del estado y su encaje en la máquina de estados: pendiente, [PD-02](../project/PENDING-DECISIONS.md#pd-02-máquina-de-estados-de-notificación-entrega-e-intento).)
 
 ### Pruebas de aceptación
 

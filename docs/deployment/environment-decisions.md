@@ -21,11 +21,12 @@ La capacidad confirmada es una línea base inicial compartida, no una asignació
 
 ## Subdominios propuestos (no confirmados)
 
-Usar variables de configuración hasta que se defina el DNS real:
+Usar variables de configuración hasta que se defina el DNS real ([PD-06](../project/PENDING-DECISIONS.md#pd-06-subdominios-y-dns)):
 
-- `notifications-api.<dominio>`: API pública y de administración según autorización.
-- `notifications-admin.<dominio>`: panel administrativo.
-- `notifications-webhooks.<dominio>`: recepción de callbacks.
+- `NOTIFICATIONS_API_HOST`: API pública y de administración según autorización.
+- `NOTIFICATIONS_ADMIN_HOST`: panel administrativo.
+- `NOTIFICATIONS_WEBHOOKS_HOST`: recepción de callbacks.
+- Los nombres concretos (por ejemplo `notifications-api.<dominio>` o `api-notifications.<dominio>`) siguen pendientes de confirmación.
 - No publicar MinIO directamente. Para descargas, usar URLs firmadas de corta duración o un endpoint controlado.
 
 ## Redes Docker

@@ -1,5 +1,7 @@
 # Matriz RBAC — v1.5
 
+> **Pendiente de aprobación ([PD-01](../project/PENDING-DECISIONS.md#pd-01-nomenclatura-y-alcance-de-roles)):** esta matriz usa `org_admin` y omite `application_admin`; ADR-0011 usa `organization_admin` e incluye `application_admin`. Ninguna nomenclatura es definitiva hasta resolver PD-01. El almacenamiento de `super_admin` tampoco está definido en el ERD.
+
 La autorización se evalúa por usuario + membresía activa + organización seleccionada. Los permisos de plataforma son independientes.
 
 | Capacidad | `super_admin` | `org_admin` | `operator` | `viewer` | API Key de aplicación |
