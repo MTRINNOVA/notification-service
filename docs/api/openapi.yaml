@@ -1,0 +1,4406 @@
+openapi: 3.1.0
+info:
+  title: Notification Service API
+  version: 1.0.0
+  description: Contrato REST multi-organización y multiaplicación. 202 Accepted confirma
+    persistencia, no entrega. Meta Cloud API queda fuera de v1.
+servers:
+- url: https://notifications-api.example.com/api/v1
+  description: URL propuesta; sustituir por DNS definitivo
+tags:
+- name: Public Notifications
+- name: Organizations
+- name: Applications
+- name: Users and Roles
+- name: Provider Accounts
+- name: WhatsApp Instances
+- name: Senders
+- name: Templates
+- name: Campaigns
+- name: Scheduling
+- name: Dashboard and Audit
+- name: Webhooks
+security: []
+paths:
+  /public/notifications:
+    post:
+      tags:
+      - Public Notifications
+      operationId: createNotification
+      summary: Aceptar una notificación para procesamiento asíncrono
+      security:
+      - ApiKeyAuth: []
+      responses:
+        '202':
+          description: Aceptar una notificación para procesamiento asíncrono
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedNotification'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      description: 202 confirma persistencia y aceptación; no implica entrega.
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 128
+      - name: X-Correlation-Id
+        in: header
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNotificationRequest'
+    get:
+      tags:
+      - Public Notifications
+      operationId: listNotifications
+      summary: Listar notificaciones de la aplicación
+      security:
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Listar notificaciones de la aplicación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /public/notifications/bulk:
+    post:
+      tags:
+      - Public Notifications
+      operationId: createBulkNotifications
+      summary: Aceptar un lote acotado
+      security:
+      - ApiKeyAuth: []
+      responses:
+        '202':
+          description: Aceptar un lote acotado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedBatch'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBulkNotificationsRequest'
+  /public/notifications/{notificationId}:
+    get:
+      tags:
+      - Public Notifications
+      operationId: getNotificationById
+      summary: Consultar notificación
+      security:
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Consultar notificación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationStatus'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /public/notifications/{notificationId}/events:
+    get:
+      tags:
+      - Public Notifications
+      operationId: listNotificationEvents
+      summary: Consultar eventos
+      security:
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Consultar eventos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /public/notifications/{notificationId}/cancel:
+    post:
+      tags:
+      - Public Notifications
+      operationId: cancelNotification
+      summary: Cancelar notificación pendiente
+      security:
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Cancelar notificación pendiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /public/notifications/{notificationId}/retry:
+    post:
+      tags:
+      - Public Notifications
+      operationId: retryNotification
+      summary: Solicitar reintento autorizado
+      security:
+      - ApiKeyAuth: []
+      responses:
+        '202':
+          description: Solicitar reintento autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /public/attachments:
+    post:
+      tags:
+      - Public Notifications
+      operationId: uploadAttachment
+      summary: Subir adjunto
+      security:
+      - ApiKeyAuth: []
+      responses:
+        '201':
+          description: Subir adjunto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attachment'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                purpose:
+                  type: string
+  /public/attachments/{attachmentId}:
+    get:
+      tags:
+      - Public Notifications
+      operationId: getAttachment
+      summary: Consultar metadatos de adjunto
+      security:
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Consultar metadatos de adjunto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attachment'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /public/templates:
+    get:
+      tags:
+      - Public Notifications
+      operationId: listPublicTemplates
+      summary: Listar plantillas disponibles
+      security:
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Listar plantillas disponibles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplatePage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /public/templates/{code}:
+    get:
+      tags:
+      - Public Notifications
+      operationId: getPublicTemplate
+      summary: Consultar plantilla publicada
+      security:
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Consultar plantilla publicada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /management/organizations:
+    get:
+      tags:
+      - Organizations
+      operationId: listOrganizations
+      summary: Listar organizacións
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Listar organizacións
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    post:
+      tags:
+      - Organizations
+      operationId: createOrganization
+      summary: Crear organización
+      security:
+      - AdminBearer: []
+      responses:
+        '201':
+          description: Crear organización
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrganizationRequest'
+  /management/organizations/{resourceId}:
+    get:
+      tags:
+      - Organizations
+      operationId: getOrganization
+      summary: Consultar organización
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Consultar organización
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    put:
+      tags:
+      - Organizations
+      operationId: updateOrganization
+      summary: Actualizar organización
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Actualizar organización
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrganizationRequest'
+  /management/applications:
+    get:
+      tags:
+      - Applications
+      operationId: listApplications
+      summary: Listar aplicacións
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Listar aplicacións
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    post:
+      tags:
+      - Applications
+      operationId: createApplication
+      summary: Crear aplicación
+      security:
+      - AdminBearer: []
+      responses:
+        '201':
+          description: Crear aplicación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApplicationRequest'
+  /management/applications/{resourceId}:
+    get:
+      tags:
+      - Applications
+      operationId: getApplication
+      summary: Consultar aplicación
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Consultar aplicación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    put:
+      tags:
+      - Applications
+      operationId: updateApplication
+      summary: Actualizar aplicación
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Actualizar aplicación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateApplicationRequest'
+  /management/users:
+    get:
+      tags:
+      - Users
+      operationId: listUsers
+      summary: Listar usuarios
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Listar usuarios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    post:
+      tags:
+      - Users
+      operationId: createUser
+      summary: Crear usuario
+      security:
+      - AdminBearer: []
+      responses:
+        '201':
+          description: Crear usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+  /management/users/{resourceId}:
+    get:
+      tags:
+      - Users
+      operationId: getUser
+      summary: Consultar usuario
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Consultar usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    put:
+      tags:
+      - Users
+      operationId: updateUser
+      summary: Actualizar usuario
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Actualizar usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+  /management/roles:
+    get:
+      tags:
+      - Roles
+      operationId: listRoles
+      summary: Listar rols
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Listar rols
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolePage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    post:
+      tags:
+      - Roles
+      operationId: createRole
+      summary: Crear rol
+      security:
+      - AdminBearer: []
+      responses:
+        '201':
+          description: Crear rol
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+  /management/roles/{resourceId}:
+    get:
+      tags:
+      - Roles
+      operationId: getRole
+      summary: Consultar rol
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Consultar rol
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    put:
+      tags:
+      - Roles
+      operationId: updateRole
+      summary: Actualizar rol
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Actualizar rol
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoleRequest'
+  /management/providers/accounts:
+    get:
+      tags:
+      - Provider Accounts
+      operationId: listProviderAccounts
+      summary: Listar cuenta de proveedors
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Listar cuenta de proveedors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderAccountPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    post:
+      tags:
+      - Provider Accounts
+      operationId: createProviderAccount
+      summary: Crear cuenta de proveedor
+      security:
+      - AdminBearer: []
+      responses:
+        '201':
+          description: Crear cuenta de proveedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderAccount'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProviderAccountRequest'
+  /management/providers/accounts/{resourceId}:
+    get:
+      tags:
+      - Provider Accounts
+      operationId: getProviderAccount
+      summary: Consultar cuenta de proveedor
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Consultar cuenta de proveedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderAccount'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    put:
+      tags:
+      - Provider Accounts
+      operationId: updateProviderAccount
+      summary: Actualizar cuenta de proveedor
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Actualizar cuenta de proveedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderAccount'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProviderAccountRequest'
+  /management/templates:
+    get:
+      tags:
+      - Templates
+      operationId: listTemplates
+      summary: Listar plantillas
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Listar plantillas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplatePage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    post:
+      tags:
+      - Templates
+      operationId: createTemplate
+      summary: Crear plantilla
+      security:
+      - AdminBearer: []
+      responses:
+        '201':
+          description: Crear plantilla
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTemplateRequest'
+  /management/templates/{resourceId}:
+    get:
+      tags:
+      - Templates
+      operationId: getTemplate
+      summary: Consultar plantilla
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Consultar plantilla
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    put:
+      tags:
+      - Templates
+      operationId: updateTemplate
+      summary: Actualizar plantilla
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Actualizar plantilla
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTemplateRequest'
+  /management/campaigns:
+    get:
+      tags:
+      - Campaigns
+      operationId: listCampaigns
+      summary: Listar campañas
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Listar campañas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    post:
+      tags:
+      - Campaigns
+      operationId: createCampaign
+      summary: Crear campaña
+      security:
+      - AdminBearer: []
+      responses:
+        '201':
+          description: Crear campaña
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCampaignRequest'
+  /management/campaigns/{resourceId}:
+    get:
+      tags:
+      - Campaigns
+      operationId: getCampaign
+      summary: Consultar campaña
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Consultar campaña
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    put:
+      tags:
+      - Campaigns
+      operationId: updateCampaign
+      summary: Actualizar campaña
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Actualizar campaña
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCampaignRequest'
+  /management/scheduled-notifications:
+    get:
+      tags:
+      - Scheduling
+      operationId: listScheduledNotifications
+      summary: Listar programacións
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Listar programacións
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledNotificationPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    post:
+      tags:
+      - Scheduling
+      operationId: createScheduledNotification
+      summary: Crear programación
+      security:
+      - AdminBearer: []
+      responses:
+        '201':
+          description: Crear programación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledNotification'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduledNotificationRequest'
+  /management/organizations/{organizationId}/status:
+    patch:
+      tags:
+      - Organizations
+      operationId: updateOrganizationStatus
+      summary: Cambiar estado de organización
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Cambiar estado de organización
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusUpdateRequest'
+  /management/organizations/{organizationId}/memberships:
+    get:
+      tags:
+      - Organizations
+      operationId: listMemberships
+      summary: Listar membresías
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Listar membresías
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MembershipPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    post:
+      tags:
+      - Organizations
+      operationId: createMembership
+      summary: Invitar/agregar miembro
+      security:
+      - AdminBearer: []
+      responses:
+        '201':
+          description: Invitar/agregar miembro
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membership'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMembershipRequest'
+  /management/organizations/{organizationId}/memberships/{membershipId}/roles:
+    put:
+      tags:
+      - Organizations
+      operationId: setMembershipRoles
+      summary: Asignar roles a membresía
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Asignar roles a membresía
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: membershipId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetMembershipRolesRequest'
+  /management/applications/{applicationId}/permissions:
+    put:
+      tags:
+      - Applications
+      operationId: setApplicationPermissions
+      summary: Actualizar permisos/límites de aplicación
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Actualizar permisos/límites de aplicación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetApplicationPermissionsRequest'
+  /management/applications/{applicationId}/limits:
+    put:
+      tags:
+      - Applications
+      operationId: setApplicationLimits
+      summary: Actualizar permisos/límites de aplicación
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Actualizar permisos/límites de aplicación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetApplicationLimitsRequest'
+  /management/applications/{applicationId}/api-keys:
+    get:
+      tags:
+      - Applications
+      operationId: listApiKeys
+      summary: Listar metadatos de API Keys
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Listar metadatos de API Keys
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    post:
+      tags:
+      - Applications
+      operationId: createApiKey
+      summary: Crear API Key
+      security:
+      - AdminBearer: []
+      responses:
+        '201':
+          description: Crear API Key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedApiKey'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApiKeyRequest'
+  /management/applications/{applicationId}/api-keys/{keyId}/rotate:
+    post:
+      tags:
+      - Applications
+      operationId: rotateApiKey
+      summary: Rotar API Key
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Rotar API Key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedApiKey'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: keyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /management/applications/{applicationId}/api-keys/{keyId}:
+    delete:
+      tags:
+      - Applications
+      operationId: revokeApiKey
+      summary: Revocar API Key
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Revocar API Key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: keyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /management/providers/definitions:
+    get:
+      tags:
+      - Provider Accounts
+      operationId: listProviderDefinitions
+      summary: Listar proveedores soportados
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Listar proveedores soportados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderDefinitionPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /management/providers/accounts/{providerAccountId}/test:
+    post:
+      tags:
+      - Provider Accounts
+      operationId: testProviderAccount
+      summary: Probar conexión
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Probar conexión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderTestResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: providerAccountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /management/providers/accounts/{providerAccountId}/health:
+    get:
+      tags:
+      - Provider Accounts
+      operationId: getProviderHealth
+      summary: Consultar salud
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Consultar salud
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderHealth'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: providerAccountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /management/providers/accounts/{providerAccountId}/enable:
+    post:
+      tags:
+      - Provider Accounts
+      operationId: enableProviderAccount
+      summary: Habilitar cuenta
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Habilitar cuenta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: providerAccountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /management/providers/accounts/{providerAccountId}/disable:
+    post:
+      tags:
+      - Provider Accounts
+      operationId: disableProviderAccount
+      summary: Deshabilitar cuenta
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Deshabilitar cuenta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: providerAccountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /management/providers/accounts/{providerAccountId}/credentials/rotate:
+    post:
+      tags:
+      - Provider Accounts
+      operationId: rotateProviderCredentials
+      summary: Rotar credenciales
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Rotar credenciales
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: providerAccountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RotateCredentialsRequest'
+  /management/providers/accounts/{providerAccountId}/instances:
+    get:
+      tags:
+      - WhatsApp Instances
+      operationId: listProviderInstances
+      summary: Listar instancias
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Listar instancias
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderInstancePage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: providerAccountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    post:
+      tags:
+      - WhatsApp Instances
+      operationId: createProviderInstance
+      summary: Crear instancia WhatsApp
+      security:
+      - AdminBearer: []
+      responses:
+        '201':
+          description: Crear instancia WhatsApp
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderInstance'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: providerAccountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProviderInstanceRequest'
+  /management/providers/instances/{instanceId}/connect:
+    post:
+      tags:
+      - WhatsApp Instances
+      operationId: connectProviderInstance
+      summary: Iniciar conexión QR
+      security:
+      - AdminBearer: []
+      responses:
+        '202':
+          description: Iniciar conexión QR
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: instanceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /management/providers/instances/{instanceId}/qr:
+    get:
+      tags:
+      - WhatsApp Instances
+      operationId: getProviderInstanceQr
+      summary: Obtener QR efímero
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Obtener QR efímero
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QrResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: instanceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /management/providers/instances/{instanceId}/status:
+    get:
+      tags:
+      - WhatsApp Instances
+      operationId: getProviderInstanceStatus
+      summary: Consultar estado
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Consultar estado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderInstance'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: instanceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /management/providers/instances/{instanceId}/disconnect:
+    post:
+      tags:
+      - WhatsApp Instances
+      operationId: disconnectProviderInstance
+      summary: Desconectar instancia
+      security:
+      - AdminBearer: []
+      responses:
+        '202':
+          description: Desconectar instancia
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: instanceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /management/providers/instances/{instanceId}/reconnect:
+    post:
+      tags:
+      - WhatsApp Instances
+      operationId: reconnectProviderInstance
+      summary: Reconectar instancia
+      security:
+      - AdminBearer: []
+      responses:
+        '202':
+          description: Reconectar instancia
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: instanceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /management/providers/instances/{instanceId}:
+    delete:
+      tags:
+      - WhatsApp Instances
+      operationId: deleteProviderInstance
+      summary: Eliminar instancia
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Eliminar instancia
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: instanceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /management/senders:
+    get:
+      tags:
+      - Senders
+      operationId: listSenders
+      summary: Listar remitentes de la organización
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Listar remitentes de la organización
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /management/senders/{senderId}:
+    get:
+      tags:
+      - Senders
+      operationId: getSender
+      summary: Consultar remitente
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Consultar remitente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sender'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: senderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /management/applications/{applicationId}/senders:
+    put:
+      tags:
+      - Senders
+      operationId: assignApplicationSenders
+      summary: Asignar remitentes a aplicación
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Asignar remitentes a aplicación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignSendersRequest'
+  /management/templates/{templateId}/versions:
+    post:
+      tags:
+      - Templates
+      operationId: createTemplateVersion
+      summary: Crear versión
+      security:
+      - AdminBearer: []
+      responses:
+        '201':
+          description: Crear versión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateVersion'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: templateId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTemplateVersionRequest'
+    get:
+      tags:
+      - Templates
+      operationId: listTemplateVersions
+      summary: Listar versiones
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Listar versiones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateVersionPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: templateId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /management/templates/{templateId}/preview:
+    post:
+      tags:
+      - Templates
+      operationId: previewTemplate
+      summary: Previsualizar
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Previsualizar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplatePreview'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: templateId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewTemplateRequest'
+  /management/templates/{templateId}/test:
+    post:
+      tags:
+      - Templates
+      operationId: testTemplate
+      summary: Enviar prueba
+      security:
+      - AdminBearer: []
+      responses:
+        '202':
+          description: Enviar prueba
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: templateId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestTemplateRequest'
+  /management/campaigns/{campaignId}/start:
+    post:
+      tags:
+      - Campaigns
+      operationId: startCampaign
+      summary: Start campaña
+      security:
+      - AdminBearer: []
+      responses:
+        '202':
+          description: Start campaña
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /management/campaigns/{campaignId}/pause:
+    post:
+      tags:
+      - Campaigns
+      operationId: pauseCampaign
+      summary: Pause campaña
+      security:
+      - AdminBearer: []
+      responses:
+        '202':
+          description: Pause campaña
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /management/campaigns/{campaignId}/cancel:
+    post:
+      tags:
+      - Campaigns
+      operationId: cancelCampaign
+      summary: Cancel campaña
+      security:
+      - AdminBearer: []
+      responses:
+        '202':
+          description: Cancel campaña
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /management/campaigns/{campaignId}/statistics:
+    get:
+      tags:
+      - Campaigns
+      operationId: getCampaignStatistics
+      summary: Consultar statistics
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Consultar statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignStatistics'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /management/campaigns/{campaignId}/recipients:
+    get:
+      tags:
+      - Campaigns
+      operationId: listCampaignRecipients
+      summary: Consultar recipients
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Consultar recipients
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignRecipientPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /management/scheduled-notifications/{scheduleId}:
+    get:
+      tags:
+      - Scheduling
+      operationId: getScheduledNotification
+      summary: Consultar programación
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Consultar programación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledNotification'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: scheduleId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    delete:
+      tags:
+      - Scheduling
+      operationId: cancelScheduledNotification
+      summary: Cancelar programación
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Cancelar programación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: scheduleId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /management//dashboard/summary:
+    get:
+      tags:
+      - Dashboard and Audit
+      operationId: getDashboardSummary
+      summary: Resumen
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Resumen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /management//dashboard/deliveries:
+    get:
+      tags:
+      - Dashboard and Audit
+      operationId: getDashboardDeliveries
+      summary: Entregas
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Entregas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryMetrics'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /management//dashboard/providers-health:
+    get:
+      tags:
+      - Dashboard and Audit
+      operationId: getDashboardProvidersHealth
+      summary: Salud de proveedores
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Salud de proveedores
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderHealthPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /management//dashboard/consumption:
+    get:
+      tags:
+      - Dashboard and Audit
+      operationId: getDashboardConsumption
+      summary: Consumo
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Consumo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsumptionMetrics'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /management//audit/events:
+    get:
+      tags:
+      - Dashboard and Audit
+      operationId: listAuditEvents
+      summary: Eventos de auditoría
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Eventos de auditoría
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEventPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /management/audit/notifications/{notificationId}:
+    get:
+      tags:
+      - Dashboard and Audit
+      operationId: getNotificationAudit
+      summary: Auditoría de notificación
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Auditoría de notificación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEventPage'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+  /webhooks/whatsapp/evolution/{providerAccountId}:
+    post:
+      tags:
+      - Webhooks
+      operationId: receiveEvolutionWebhook
+      summary: Recibir webhook Evolution
+      security: []
+      responses:
+        '200':
+          description: Recibir webhook Evolution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      description: Autenticación específica del proveedor/cuenta (firma, token o mecanismo
+        comprobado en la versión fijada). El payload externo se valida antes de normalizar;
+        el evento se persiste antes de responder. No asumir un header genérico sin
+        validar el proveedor.
+      parameters:
+      - name: providerAccountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /webhooks/email/{providerAccountId}:
+    post:
+      tags:
+      - Webhooks
+      operationId: receiveEmailWebhook
+      summary: Recibir webhook email
+      security: []
+      responses:
+        '200':
+          description: Recibir webhook email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      description: Autenticación específica del proveedor/cuenta (firma, token o mecanismo
+        comprobado en la versión fijada). El payload externo se valida antes de normalizar;
+        el evento se persiste antes de responder. No asumir un header genérico sin
+        validar el proveedor.
+      parameters:
+      - name: providerAccountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /webhooks/sms/{providerAccountId}:
+    post:
+      tags:
+      - Webhooks
+      operationId: receiveSmsWebhook
+      summary: Recibir webhook SMS
+      security: []
+      responses:
+        '200':
+          description: Recibir webhook SMS
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+      description: Autenticación específica del proveedor/cuenta (firma, token o mecanismo
+        comprobado en la versión fijada). El payload externo se valida antes de normalizar;
+        el evento se persiste antes de responder. No asumir un header genérico sin
+        validar el proveedor.
+      parameters:
+      - name: providerAccountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /management/auth/login:
+    post:
+      tags:
+      - Authentication
+      operationId: login
+      summary: Iniciar sesión de usuario
+      security: []
+      responses:
+        '200':
+          description: Iniciar sesión de usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+  /management/auth/refresh:
+    post:
+      tags:
+      - Authentication
+      operationId: refreshSession
+      summary: Rotar refresh token y emitir access token
+      security: []
+      responses:
+        '200':
+          description: Rotar refresh token y emitir access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+      description: Refresh token opaco se transporta mediante cookie HttpOnly; validar
+        CSRF según configuración.
+  /management/auth/logout:
+    post:
+      tags:
+      - Authentication
+      operationId: logout
+      summary: Cerrar sesión y revocar refresh token
+      security: []
+      responses:
+        '204':
+          description: Sesión revocada; cookie eliminada.
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+      description: Revoca la familia de refresh tokens y limpia la cookie.
+  /management/auth/me:
+    get:
+      tags:
+      - Authentication
+      operationId: getCurrentUser
+      summary: Consultar identidad y membresías activas
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Consultar identidad y membresías activas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /management/auth/active-organization:
+    put:
+      tags:
+      - Authentication
+      operationId: selectActiveOrganization
+      summary: Seleccionar organización activa
+      security:
+      - AdminBearer: []
+      responses:
+        '200':
+          description: Seleccionar organización activa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectOrganizationRequest'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    AdminBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ActionResult:
+      type: object
+      required:
+      - success
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        correlationId:
+          type: string
+    AcceptedNotification:
+      type: object
+      required:
+      - notificationId
+      - status
+      - acceptedAt
+      properties:
+        notificationId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - ACCEPTED
+          - QUEUED
+        acceptedAt:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+    CreateNotificationRequest:
+      type: object
+      required:
+      - channel
+      - recipient
+      properties:
+        channel:
+          type: string
+          enum:
+          - WHATSAPP
+          - EMAIL
+          - SMS
+        recipient:
+          oneOf:
+          - type: string
+          - type: object
+            additionalProperties: true
+        senderId:
+          type: string
+          format: uuid
+        template:
+          $ref: '#/components/schemas/TemplateReference'
+        content:
+          type: object
+          additionalProperties: true
+        attachmentIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        scheduledAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+      oneOf:
+      - required:
+        - template
+      - required:
+        - content
+    CreateBulkNotificationsRequest:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            $ref: '#/components/schemas/CreateNotificationRequest'
+    AcceptedBatch:
+      type: object
+      required:
+      - batchId
+      - acceptedCount
+      properties:
+        batchId:
+          type: string
+          format: uuid
+        acceptedCount:
+          type: integer
+        rejectedCount:
+          type: integer
+        status:
+          type: string
+    NotificationStatus:
+      type: object
+      required:
+      - notificationId
+      - channel
+      - status
+      - createdAt
+      properties:
+        notificationId:
+          type: string
+          format: uuid
+        channel:
+          type: string
+        status:
+          type: string
+        recipient:
+          type: object
+          additionalProperties: true
+        senderId:
+          type: string
+          format: uuid
+        providerMessageId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        sentAt:
+          type: string
+          format: date-time
+        deliveredAt:
+          type: string
+          format: date-time
+        readAt:
+          type: string
+          format: date-time
+        errorCode:
+          type: string
+    EventPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    NotificationPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationStatus'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    Attachment:
+      type: object
+      properties:
+        attachmentId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        contentType:
+          type: string
+        sizeBytes:
+          type: integer
+        checksumSha256:
+          type: string
+        downloadUrl:
+          type: string
+          format: uri
+    TemplateReference:
+      type: object
+      required:
+      - code
+      properties:
+        code:
+          type: string
+        version:
+          type: integer
+        locale:
+          type: string
+        variables:
+          type: object
+          additionalProperties: true
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        channel:
+          type: string
+        status:
+          type: string
+        currentVersion:
+          type: integer
+    TemplatePage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Template'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    CreateOrganizationRequest:
+      type: object
+      required:
+      - code
+      - name
+      - timezone
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        timezone:
+          type: string
+          default: America/Lima
+    UpdateOrganizationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        timezone:
+          type: string
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        timezone:
+          type: string
+    CreateApplicationRequest:
+      type: object
+      required:
+      - code
+      - name
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        timezoneOverride:
+          type:
+          - string
+          - 'null'
+    UpdateApplicationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        timezoneOverride:
+          type:
+          - string
+          - 'null'
+    Application:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        timezone:
+          type: string
+    CreateUserRequest:
+      type: object
+      required:
+      - email
+      - displayName
+      properties:
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+    UpdateUserRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+        status:
+          type: string
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        status:
+          type: string
+    CreateRoleRequest:
+      type: object
+      required:
+      - code
+      - name
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+    UpdateRoleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+    CreateProviderAccountRequest:
+      type: object
+      required:
+      - providerCode
+      - code
+      - name
+      properties:
+        providerCode:
+          type: string
+          enum:
+          - EVOLUTION_API
+          - POSTFIX_SMTP
+          - CUSTOM_SMTP
+          - ANDROID_SMS_GATEWAY
+        code:
+          type: string
+        name:
+          type: string
+        configuration:
+          type: object
+          additionalProperties: true
+        credentials:
+          type: object
+          additionalProperties:
+            type: string
+    UpdateProviderAccountRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        configuration:
+          type: object
+          additionalProperties: true
+    ProviderAccount:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        providerCode:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        credentialsConfigured:
+          type: boolean
+    ProviderDefinitionPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    ProviderAccountPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProviderAccount'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    ProviderTestResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        checkedAt:
+          type: string
+          format: date-time
+        latencyMs:
+          type: integer
+        code:
+          type: string
+        message:
+          type: string
+    ProviderHealth:
+      type: object
+      properties:
+        status:
+          type: string
+        lastCheckedAt:
+          type: string
+          format: date-time
+        latencyMs:
+          type: integer
+    CreateProviderInstanceRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+        phoneNumberLabel:
+          type: string
+    ProviderInstance:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        connectionStatus:
+          type: string
+        lastConnectedAt:
+          type: string
+          format: date-time
+        senderId:
+          type: string
+          format: uuid
+    ProviderInstancePage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProviderInstance'
+    QrResponse:
+      type: object
+      required:
+      - qr
+      - expiresAt
+      properties:
+        qr:
+          type: string
+          description: Contenido temporal del QR; nunca persistir en frontend.
+        expiresAt:
+          type: string
+          format: date-time
+    Sender:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayNumber:
+          type: string
+        label:
+          type: string
+        status:
+          type: string
+        isDefault:
+          type: boolean
+    SenderPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Sender'
+    AssignSendersRequest:
+      type: object
+      required:
+      - senderIds
+      properties:
+        senderIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        defaultSenderId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+    CreateTemplateRequest:
+      type: object
+      required:
+      - code
+      - name
+      - channel
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        channel:
+          type: string
+          enum:
+          - WHATSAPP
+          - EMAIL
+          - SMS
+    UpdateTemplateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+    CreateTemplateVersionRequest:
+      type: object
+      required:
+      - locale
+      - body
+      properties:
+        locale:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+        variablesSchema:
+          type: object
+          additionalProperties: true
+    TemplateVersion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+        locale:
+          type: string
+        status:
+          type: string
+    TemplateVersionPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateVersion'
+    PreviewTemplateRequest:
+      type: object
+      required:
+      - variables
+      properties:
+        variables:
+          type: object
+          additionalProperties: true
+    TemplatePreview:
+      type: object
+      properties:
+        renderedSubject:
+          type: string
+        renderedBody:
+          type: string
+    TestTemplateRequest:
+      type: object
+      required:
+      - recipient
+      properties:
+        recipient:
+          type: string
+        senderId:
+          type: string
+          format: uuid
+        variables:
+          type: object
+          additionalProperties: true
+    CreateCampaignRequest:
+      type: object
+      required:
+      - name
+      - channel
+      - templateVersionId
+      properties:
+        name:
+          type: string
+        channel:
+          type: string
+        templateVersionId:
+          type: string
+          format: uuid
+        scheduledAt:
+          type: string
+          format: date-time
+        recipients:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    UpdateCampaignRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+        channel:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    CampaignPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Campaign'
+    CampaignStatistics:
+      type: object
+      properties:
+        total:
+          type: integer
+        queued:
+          type: integer
+        sent:
+          type: integer
+        delivered:
+          type: integer
+        failed:
+          type: integer
+    CampaignRecipientPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    CreateScheduledNotificationRequest:
+      type: object
+      required:
+      - notification
+      properties:
+        notification:
+          $ref: '#/components/schemas/CreateNotificationRequest'
+        executeAt:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+    UpdateScheduledNotificationRequest:
+      type: object
+      properties:
+        executeAt:
+          type: string
+          format: date-time
+    ScheduledNotification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        executeAt:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+    Membership:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+    MembershipPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Membership'
+    CreateMembershipRequest:
+      type: object
+      required:
+      - email
+      - roles
+      properties:
+        email:
+          type: string
+          format: email
+        roles:
+          type: array
+          items:
+            type: string
+    SetMembershipRolesRequest:
+      type: object
+      required:
+      - roles
+      properties:
+        roles:
+          type: array
+          items:
+            type: string
+    StatusUpdateRequest:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - SUSPENDED
+          - DISABLED
+    SetApplicationPermissionsRequest:
+      type: object
+      required:
+      - permissions
+      properties:
+        permissions:
+          type: array
+          items:
+            type: string
+    SetApplicationLimitsRequest:
+      type: object
+      properties:
+        whatsappDailyLimit:
+          type: integer
+          minimum: 1
+          maximum: 500
+        ratePerMinute:
+          type: integer
+          minimum: 1
+    CreateApiKeyRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+        scopes:
+          type: array
+          items:
+            type: string
+        expiresAt:
+          type: string
+          format: date-time
+    CreatedApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+          description: Solo se devuelve al crear/rotar.
+        prefix:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+    ApiKeyPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              prefix:
+                type: string
+              expiresAt:
+                type: string
+                format: date-time
+              revokedAt:
+                type: string
+                format: date-time
+    RotateCredentialsRequest:
+      type: object
+      properties:
+        credentials:
+          type: object
+          additionalProperties:
+            type: string
+    DeliveryMetrics:
+      type: object
+      additionalProperties: true
+    DashboardSummary:
+      type: object
+      additionalProperties: true
+    ConsumptionMetrics:
+      type: object
+      additionalProperties: true
+    ProviderHealthPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProviderHealth'
+    AuditEventPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    OrganizationPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Organization'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    ApplicationPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Application'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    UserPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    RolePage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    ProblemDetails:
+      type: object
+      required:
+      - title
+      - status
+      - code
+      - traceId
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+        traceId:
+          type: string
+        retryAt:
+          type: string
+          format: date-time
+        errors:
+          type: object
+          additionalProperties: true
+    Organizations:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Organization'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    Applications:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Application'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    Users:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    Roles:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    ProviderAccounts:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProviderAccount'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    Templates:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Template'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    Campaigns:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Campaign'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    ScheduledNotifications:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduledNotification'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    ScheduledNotificationPage:
+      type: object
+      additionalProperties: true
+    LoginRequest:
+      type: object
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          default: Bearer
+        expiresIn:
+          type: integer
+        user:
+          $ref: '#/components/schemas/CurrentUser'
+    CurrentUser:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        activeOrganizationId:
+          type: string
+          format: uuid
+        memberships:
+          type: array
+          items:
+            $ref: '#/components/schemas/Membership'
+    SelectOrganizationRequest:
+      type: object
+      required:
+      - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+  responses:
+    Problem:
+      description: RFC 9457 Problem Details
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'

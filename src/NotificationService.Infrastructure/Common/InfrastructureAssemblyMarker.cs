@@ -1,0 +1,3 @@
+namespace NotificationService.Infrastructure.Common;
+
+public sealed class InfrastructureAssemblyMarker;

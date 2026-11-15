@@ -1,0 +1,91 @@
+# Criterios de aceptación — v1.5
+
+## 1. Identidad y multi-tenancy
+
+- Un usuario puede pertenecer a más de una organización y seleccionar el contexto activo.
+- Los roles se resuelven por membresía y no se comparten accidentalmente entre organizaciones.
+- `super_admin` puede operar globalmente; toda acción global queda auditada.
+- Una API Key queda vinculada a una sola aplicación y, por transitividad, a una organización.
+- Una aplicación no puede consultar ni modificar recursos de otra organización, incluso manipulando UUIDs.
+- Las pruebas de integración verifican aislamiento para notificaciones, remitentes, proveedores, plantillas, campañas, adjuntos y auditoría.
+
+## 2. Autenticación
+
+- Access JWT de corta duración y validación de issuer, audience, firma, expiración y scopes/roles.
+- Refresh token opaco almacenado como hash, rotativo y en cookie `HttpOnly`, `Secure` y `SameSite` apropiado.
+- Reutilización de refresh token revoca la familia de sesión y genera evento de auditoría.
+- Operaciones autenticadas por cookie implementan protección CSRF.
+- API Keys se muestran una sola vez; se almacenan como hash, pueden rotarse/revocarse y tienen scopes/expiración.
+- Ningún secreto de proveedor aparece en responses, frontend, logs o mensajes RabbitMQ.
+
+## 3. Evolution API / WhatsApp
+
+- La plataforma crea una instancia por número y organización usando Evolution centralizado.
+- El QR solo es visible a un usuario autorizado, es temporal y no se almacena como secreto permanente.
+- El estado de conexión se obtiene de eventos autenticados y/o consulta al proveedor.
+- La sesión sobrevive a reinicios controlados de Evolution si la versión/almacenamiento fijados lo permiten; esto se prueba antes de producción.
+- Un remitente solo se asigna a aplicaciones de su organización.
+- La aplicación puede indicar `senderId`; si lo omite se usa el default activo; si no existe, se rechaza.
+- Un número desconectado no acepta nuevas entregas; se devuelve error de negocio estable.
+- La aceptación del proveedor no se interpreta como entrega confirmada.
+- Resultado ambiguo no genera reenvío ciego.
+
+## 4. SMS y email
+
+- SMS solo se habilita cuando versión de servidor, app Android, autenticación, endpoint y SIM han sido verificados.
+- El gateway SMS está asociado a una sola organización y su salud/última actividad es visible.
+- SMTP central y SMTP externo se configuran por organización sin exponer secretos.
+- Prueba SMTP distingue conexión/autenticación aceptada de entrega final.
+- SPF, DKIM, DMARC y PTR se verifican en DNS antes de habilitar envío productivo desde dominio propio.
+
+## 5. Notificaciones y cuotas
+
+- La creación de notificación es transaccional con reserva de cuota y Outbox.
+- `202 Accepted` solo se devuelve después de persistir la solicitud y su evento Outbox.
+- Repetición idempotente no crea una segunda notificación ni consume cuota adicional.
+- Misma idempotency key con request hash distinto produce `409`.
+- Cuota inicial WhatsApp: 500 mensajes aceptados por día y organización, agregada entre aplicaciones y números.
+- El día se calcula en `organizations.timezone`; el contador se actualiza atómicamente.
+- Límites menores por aplicación no pueden exceder el límite efectivo de organización.
+- Validaciones fallidas no consumen cuota; aceptación sí; reintentos técnicos no vuelven a consumirla.
+- El exceso de cuota devuelve `429` y código estable.
+
+## 6. Mensajería resiliente
+
+- Outbox y recurso de negocio se guardan en la misma transacción PostgreSQL.
+- Publicador usa publisher confirms y puede publicar más de una vez sin duplicar efectos internos.
+- Consumidores usan ack manual e Inbox deduplicada.
+- Reintentos usan backoff exponencial con jitter y límite configurado.
+- Errores permanentes van a fallo terminal/DLQ; los mensajes DLQ son inspeccionables y reprocesables bajo autorización.
+- No se promete exactly-once extremo a extremo.
+
+## 7. Adjuntos y plantillas
+
+- Adjuntos se almacenan en bucket privado; metadata y checksum en PostgreSQL.
+- Validar tamaño, extensión, MIME real y política de escaneo.
+- Las URLs firmadas expiran y no permiten listado público.
+- Las versiones publicadas de plantillas son inmutables.
+- El renderizado valida variables requeridas y escapa contenido según canal.
+
+## 8. Campañas y programación
+
+- Campaña valida audiencia, consentimiento, plantilla, remitente y cuota antes de iniciar.
+- Pausa/cancelación detiene nuevos despachos; no se promete cancelar mensajes ya aceptados por proveedor.
+- Programación convierte hora local a UTC al crear y conserva zona horaria/valor local para auditoría.
+- El scheduler es idempotente ante reinicios y múltiples réplicas.
+
+## 9. Operación
+
+- Health/readiness distingue aplicación, PostgreSQL, RabbitMQ, Redis, MinIO y proveedores externos.
+- Logs estructurados incluyen correlation ID y omiten secretos/PII no necesaria.
+- Métricas incluyen cola, latencia, errores, reintentos, cuota, salud de proveedor y desconexiones.
+- Backups PostgreSQL y MinIO tienen prueba documentada de restauración.
+- Límites de CPU/memoria/disco y alertas se prueban en el VPS antes de producción.
+
+## 10. Condición de salida a producción
+
+- Pruebas automatizadas unitarias, integración, contrato, seguridad multi-tenant y carga completadas.
+- Versiones/digests de imágenes fijados; no usar `latest` en producción.
+- Secretos del ZIP legado rotados y fuera del repositorio/historial accesible.
+- RPO/RTO aprobados y restauración demostrada.
+- Contratos reales de Evolution, SMSGate y SMTP validados en entorno de pruebas.
