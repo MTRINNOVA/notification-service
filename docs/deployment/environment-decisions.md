@@ -55,10 +55,4 @@ Los paths son una propuesta, no una configuración ejecutada. Confirmar filesyst
 
 ## Datos pendientes para el despliegue final
 
-1. Dominio raíz y nombres DNS definitivos.
-2. Nombre exacto de la red Traefik y convenciones de labels.
-3. Paths definitivos, filesystem, espacio libre, UID/GID y permisos.
-4. Si Evolution API, Postfix y SMSGate estarán en el mismo VPS o en infraestructura separada.
-5. Política de backups y objetivos RPO/RTO.
-6. Límites de recursos por contenedor y monitoreo.
-7. Tamaño medio/máximo de adjuntos y distribución del tráfico por canal.
+Migrados el 2026-11-15 al registro operativo único [technical-pending-register.md](../operations/technical-pending-register.md): DNS, red Traefik, paths, UID/GID y ubicación de Evolution/Postfix/SMSGate → TP-27; backups y RPO/RTO → TP-29; límites de recursos, monitoreo y tráfico/adjuntos → TP-30.

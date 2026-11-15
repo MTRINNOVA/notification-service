@@ -1,5 +1,7 @@
 # Informe de cierre de decisiones técnicas TP-02, TP-09 y TP-15 a TP-20 — 2026-11-15
 
+> **Documento histórico** (evidencia de la auditoría del 2026-11-15). No es fuente operativa: el estado vigente de los pendientes está en [technical-pending-register.md](technical-pending-register.md) y las decisiones en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
+
 ## 1. Resumen ejecutivo
 
 Se incorporaron a la documentación las decisiones aprobadas por el usuario TP-02, TP-15, TP-16, TP-17, TP-18, TP-19 y TP-20, y se registró TP-09 como corrección de código independiente. **La tarea fue exclusivamente documental:** no se modificaron archivos `.cs`, `.csproj`, `.props` ni configuración ejecutable, y no se inició la Fase 2.

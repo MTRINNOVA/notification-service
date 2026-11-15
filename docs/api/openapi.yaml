@@ -309,12 +309,15 @@ paths:
             type: string
             format: uuid
       description:
-        "Reenvío manual autorizado (TP-19): crea una **nueva** notificación
+        "Reenvío manual (TP-19, TP-21): lo solicita la **aplicación consumidora**
+        autenticada con su API Key, que debe tener el scope `notifications.retry`;
+        el actor es la aplicación, nunca un usuario humano. Crea una **nueva** notificación
         y una nueva entrega vinculadas a la original mediante `resendOfNotificationId`,
-        con nueva Idempotency-Key, y consume cuota una vez al aceptarse. No modifica
-        el historial de la original. Solo se admite si la original está `FAILED` y
-        su entrega no requiere conciliación. Los reintentos técnicos son automáticos
-        y no se solicitan por API.
+        con nueva Idempotency-Key y motivo obligatorio, y consume cuota una vez al aceptarse.
+        No modifica el historial de la original. Solo se admite si la original está
+        `FAILED` y su entrega no requiere conciliación. La auditoría registra la aplicación
+        y la API Key de origen. Los reintentos técnicos son automáticos y no se solicitan
+        por API.
 
 
         Códigos de error específicos: IDEMPOTENCY_KEY_CONFLICT, NOTIFICATION_NOT_RETRYABLE
@@ -1667,6 +1670,54 @@ paths:
       description:
         "Códigos de error específicos: ROLE_NOT_ASSIGNABLE (422): `super_admin`
         o rol de otra organización."
+  /management/organizations/{organizationId}/memberships/{membershipId}/status:
+    patch:
+      tags:
+        - Organizations
+      operationId: updateMembershipStatus
+      summary: Cambiar estado de una membresía
+      description:
+        Suspende, desactiva o reactiva el acceso de un usuario a una organización
+        sin afectar a sus otras membresías ni a su cuenta global. Permitido a
+        `organization_admin` de esa organización y a `super_admin` (con auditoría).
+        Una membresía no activa deja de habilitar la organización en el contexto
+        del usuario.
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Membresía actualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Membership"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: membershipId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusUpdateRequest"
   /management/applications/{applicationId}/permissions:
     put:
       tags:
@@ -3594,6 +3645,10 @@ components:
       type: apiKey
       in: header
       name: X-API-Key
+      description:
+        API Key de una aplicación consumidora. Los permisos son scopes propios de la
+        aplicación (p.ej. `notifications.send`, `notifications.retry`); no hereda roles
+        humanos. El actor de estas operaciones es la aplicación.
     AdminBearer:
       type: http
       scheme: bearer
@@ -4316,13 +4371,6 @@ components:
         createdAt:
           type: string
           format: date-time
-    CampaignPage:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/Campaign"
     CampaignStatistics:
       type: object
       properties:
@@ -4357,12 +4405,6 @@ components:
           description:
             Instante RFC 3339. Las horas locales se interpretan en la zona
             horaria de la organización.
-    UpdateScheduledNotificationRequest:
-      type: object
-      properties:
-        executeAt:
-          type: string
-          format: date-time
     ScheduledNotification:
       type: object
       properties:
@@ -4646,72 +4688,7 @@ components:
             type: array
             items:
               type: string
-    Organizations:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/Organization"
-        page:
-          type: integer
-        pageSize:
-          type: integer
-        total:
-          type: integer
-    Applications:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/Application"
-        page:
-          type: integer
-        pageSize:
-          type: integer
-        total:
-          type: integer
-    Users:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/User"
-        page:
-          type: integer
-        pageSize:
-          type: integer
-        total:
-          type: integer
-    ProviderAccounts:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/ProviderAccount"
-        page:
-          type: integer
-        pageSize:
-          type: integer
-        total:
-          type: integer
-    Templates:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/Template"
-        page:
-          type: integer
-        pageSize:
-          type: integer
-        total:
-          type: integer
-    Campaigns:
+    CampaignPage:
       type: object
       properties:
         items:
@@ -4724,7 +4701,7 @@ components:
           type: integer
         total:
           type: integer
-    ScheduledNotifications:
+    ScheduledNotificationPage:
       type: object
       properties:
         items:
@@ -4737,9 +4714,6 @@ components:
           type: integer
         total:
           type: integer
-    ScheduledNotificationPage:
-      type: object
-      additionalProperties: true
     LoginRequest:
       type: object
       required:

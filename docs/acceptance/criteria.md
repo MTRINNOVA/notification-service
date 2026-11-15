@@ -6,6 +6,8 @@
 - Los roles se resuelven por membresía y no se comparten accidentalmente entre organizaciones. Roles de organización v1: `organization_admin`, `operator`, `viewer` (no existen `org_admin`, `application_admin` ni roles personalizados). La API no permite crear ni editar roles ni asignarlos fuera de una membresía.
 - `super_admin` puede operar globalmente; toda acción global queda auditada. El primero se crea por bootstrap idempotente (`SYSTEM_BOOTSTRAP`); los siguientes, con la Platform API. No se puede revocar el último activo (`422 LAST_SUPER_ADMIN_REVOCATION_FORBIDDEN`). Se almacena en `platform_role_assignments`, independiente de las membresías; intentar asignarlo en una membresía devuelve `422 ROLE_NOT_ASSIGNABLE`. Su concesión y revocación se auditan.
 - Una API Key queda vinculada a una sola aplicación y, por transitividad, a una organización.
+- Suspender o desactivar una membresía (`PATCH .../memberships/{membershipId}/status`) retira el acceso a esa organización sin afectar a las otras membresías del usuario ni a su cuenta global.
+- El reenvío manual lo solicita la aplicación con su API Key y el scope `notifications.retry`; la auditoría lo atribuye a la aplicación (`actor_type = APPLICATION`) y a la API Key, nunca a un usuario.
 - Una aplicación no puede consultar ni modificar recursos de otra organización, incluso manipulando UUIDs.
 - Las pruebas de integración verifican aislamiento para notificaciones, remitentes, proveedores, plantillas, campañas, adjuntos y auditoría.
 

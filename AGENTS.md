@@ -18,7 +18,7 @@ Alcance v1: envíos individuales y por lotes, plantillas, adjuntos, seguimiento 
 | ------------------------------- | -------------------------------------------------------------------------------------------------- |
 | Runtime                         | .NET 10 LTS (SDK fijado en [global.json](global.json): `10.0.404`, `rollForward: latestPatch`), C# |
 | API                             | ASP.NET Core Web API, REST, JSON UTF-8, OpenAPI 3.1 / Swagger                                      |
-| Persistencia                    | PostgreSQL + EF Core 10 + Npgsql                                                                   |
+| Persistencia | **PostgreSQL 17** (desarrollo, pruebas y producción; imagen con patch fijado, nunca `latest`) + EF Core 10 + Npgsql |
 | Mensajería                      | RabbitMQ (broker principal)                                                                        |
 | Caché / rate limit / temporales | Redis (nunca como broker)                                                                          |
 | Archivos                        | MinIO (bucket privado)                                                                             |
@@ -45,7 +45,7 @@ Clean Architecture + Hexagonal (Ports and Adapters) — [ADR-0001](docs/adr/0001
 | Decisiones PD y pendientes | [PENDING-DECISIONS.md](docs/project/PENDING-DECISIONS.md) (historial de PD-01..PD-08, todas aprobadas), [technical-pending-register.md](docs/operations/technical-pending-register.md) (puntos abiertos), [error-codes.md](docs/api/error-codes.md)                                  |
 | Estructura y dependencias  | [docs/architecture/project-structure.md](docs/architecture/project-structure.md), [hexagonal.md](docs/architecture/hexagonal.md), C4: [context](docs/architecture/c4-context.md), [containers](docs/architecture/c4-containers.md), [components](docs/architecture/c4-components.md) |
 | Datos                      | [docs/data/erd.md](docs/data/erd.md) (modelo lógico, requiere revisión antes de migraciones)                                                                                                                                                                                         |
-| API                        | [docs/api/openapi.yaml](docs/api/openapi.yaml) (contrato normativo), [api-design.md](docs/api/api-design.md), [endpoint-inventory.md](docs/api/endpoint-inventory.md)                                                                                                                |
+| API | [docs/api/openapi.yaml](docs/api/openapi.yaml): **fuente normativa única** del contrato HTTP v1. [endpoint-inventory.md](docs/api/endpoint-inventory.md) es un resumen derivado y [api-design.md](docs/api/api-design.md) explica criterios; ninguno define rutas propias. Cambios de contrato: primero `openapi.yaml` |
 | Seguridad                  | [docs/security/security-model.md](docs/security/security-model.md), [rbac-matrix.md](docs/security/rbac-matrix.md), [ADR-0011](docs/adr/0011-admin-identity.md)                                                                                                                      |
 | Mensajería                 | [docs/messaging/rabbitmq-outbox.md](docs/messaging/rabbitmq-outbox.md), [ADR-0005](docs/adr/0005-messaging.md), [ADR-0012](docs/adr/0012-delivery-semantics.md)                                                                                                                      |
 | Proveedores                | [docs/providers/](docs/providers/) (adapters, contratos v1.5, webhooks, riesgos, fuente legada)                                                                                                                                                                                      |
@@ -301,7 +301,9 @@ También están aprobadas (2026-11-15) las decisiones técnicas TP-02, TP-09 y T
 | TP-19 | Reintento técnico ≠ reenvío manual ≠ conciliación                                                                                           | [ADR-0012](docs/adr/0012-delivery-semantics.md)                                                                   |
 | TP-20 | Catálogo cerrado de roles; sin roles personalizados                                                                                         | [rbac-matrix.md](docs/security/rbac-matrix.md)                                                                    |
 
-Puntos abiertos que requieren aprobación (p.ej. TP-21 actor del reenvío manual, TP-22 divergencias de contrato): ver [technical-pending-register.md](docs/operations/technical-pending-register.md). Mientras sigan abiertos:
+Además, **TP-21** (el reenvío manual lo solicita la aplicación con API Key y scope `notifications.retry`; actor auditado `APPLICATION`, nunca `USER`) y **TP-22** (`openapi.yaml` como fuente única; esquemas sin uso eliminados; estado de membresía incorporado) están cerrados.
+
+Puntos abiertos que requieren aprobación (p.ej. TP-28, TP-33 a TP-37): ver [technical-pending-register.md](docs/operations/technical-pending-register.md). Mientras sigan abiertos:
 
 - No implementar ninguna alternativa, ni siquiera la recomendada.
 - No convertirlos en regla, código, migración, enum ni contrato OpenAPI.

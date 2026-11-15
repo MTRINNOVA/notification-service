@@ -1,37 +1,83 @@
-# Índice de documentación — Notification Platform v1.5
+# Índice de documentación — Notification Platform v1
 
-## Backend (`notification-service`)
+Índice del repositorio `notification-service` (actualizado el 2026-11-15). Los documentos **normativos** definen lo vigente; los **históricos** son evidencia de auditorías y decisiones pasadas y no deben usarse como fuente operativa.
 
-- Arquitectura y estructura: `notification-service/docs/architecture/`
-- ADR: `notification-service/docs/adr/`
-- Datos y ERD: `notification-service/docs/data/erd.md`
-- API: `notification-service/docs/api/api-design.md`, `endpoint-inventory.md`, `openapi.yaml`, `error-codes.md`
-- Seguridad: `notification-service/docs/security/security-model.md`, `rbac-matrix.md`
-- Mensajería: `notification-service/docs/messaging/rabbitmq-outbox.md`
-- Proveedores: `notification-service/docs/providers/provider-adapters.md`, `provider-contracts-v1.5.md`, `legacy-source-assessment.md`, `webhook-contract-readiness.md`, `risk-register.md`
-- Despliegue: `notification-service/docs/deployment/`
-- Operación y readiness: `notification-service/docs/operations/`
-- Aceptación: `notification-service/docs/acceptance/criteria.md`
-- Pruebas: `notification-service/docs/testing/integration-testing-postgresql.md`
+## Normativos
 
-## Frontend (`notification-admin`)
+### Decisiones
 
-- Arquitectura: `notification-admin/docs/architecture/`
-- API: `notification-admin/docs/api/management-api-consumption.md`
-- Seguridad: `notification-admin/docs/security/frontend-security.md`
-- Despliegue: `notification-admin/docs/deployment/docker.md`
-- Aceptación: `notification-admin/docs/acceptance/criteria.md`
+- [DECISIONS-v1.5.md](DECISIONS-v1.5.md): decisiones aprobadas de producto y técnicas (incluye PD-01..PD-08, TP-02, TP-15..TP-22 y PostgreSQL 17).
+- ADR vigentes:
+  - [ADR-0001](../adr/0001-architecture.md): Clean + Hexagonal
+  - [ADR-0002](../adr/0002-repositories.md): repositorios separados
+  - [ADR-0003](../adr/0003-tenancy.md): tenancy
+  - [ADR-0004](../adr/0004-whatsapp-adapters.md): adaptadores WhatsApp
+  - [ADR-0005](../adr/0005-messaging.md): RabbitMQ
+  - [ADR-0006](../adr/0006-storage.md): MinIO
+  - [ADR-0007](../adr/0007-rest-json.md): REST/JSON
+  - [ADR-0008](../adr/0008-dotnet.md): .NET 10 + EF Core + PostgreSQL
+  - [ADR-0009](../adr/0009-provider-config.md): configuración de proveedores
+  - [ADR-0010](../adr/0010-traefik.md): Traefik externo
+  - [ADR-0011](../adr/0011-admin-identity.md): identidad, roles y `super_admin`
+  - [ADR-0012](../adr/0012-delivery-semantics.md): semántica de entrega, reenvío y conciliación
 
-## Decisiones y cambios
+### Contrato API v1
 
-- `DECISIONS-v1.5.md` (decisiones aprobadas)
-- `PENDING-DECISIONS.md` (registro histórico de PD-01 a PD-08, **todas aprobadas** el 2026-11-15)
-- `CHANGELOG-v1.5.md`
+- [openapi.yaml](../api/openapi.yaml): **fuente normativa única** del contrato HTTP.
+- [endpoint-inventory.md](../api/endpoint-inventory.md): resumen derivado de OpenAPI.
+- [api-design.md](../api/api-design.md): criterios de diseño; no define rutas.
+- [error-codes.md](../api/error-codes.md): catálogo cerrado de códigos de error.
 
-## Operación del repositorio
+### Arquitectura y datos
 
-- Saneamiento de la fundación: `notification-service/docs/operations/repository-sanitization-report.md`
-- Pendientes técnicos: `notification-service/docs/operations/technical-pending-register.md`
-- Cierre de decisiones PD-01 a PD-08: `notification-service/docs/operations/decision-closure-report.md`
-- Cierre de decisiones TP-02, TP-15 a TP-20: `notification-service/docs/operations/decision-closure-report-tp15-tp20.md`
-- Bootstrap y recuperación de `super_admin`: `notification-service/docs/operations/super-admin-bootstrap.md`
+- [hexagonal.md](../architecture/hexagonal.md): capas y puertos, incluidos los de proveedores.
+- [project-structure.md](../architecture/project-structure.md): estructura de la solución.
+- C4: [contexto](../architecture/c4-context.md), [contenedores](../architecture/c4-containers.md), [componentes](../architecture/c4-components.md).
+- [erd.md](../data/erd.md): modelo lógico aprobado v1 (PostgreSQL 17).
+
+### Seguridad
+
+- [security-model.md](../security/security-model.md)
+- [rbac-matrix.md](../security/rbac-matrix.md)
+
+### Mensajería y proveedores
+
+- [rabbitmq-outbox.md](../messaging/rabbitmq-outbox.md)
+- [provider-adapters.md](../providers/provider-adapters.md)
+- [provider-contracts-v1.5.md](../providers/provider-contracts-v1.5.md)
+- [webhook-contract-readiness.md](../providers/webhook-contract-readiness.md)
+- [risk-register.md](../providers/risk-register.md): registro de **riesgos**, distinto del de pendientes.
+- [legacy-source-assessment.md](../providers/legacy-source-assessment.md): evaluación de la fuente legada (evidencia).
+
+### Operación y despliegue
+
+- [technical-pending-register.md](../operations/technical-pending-register.md): **registro operativo único de pendientes**.
+- [super-admin-bootstrap.md](../operations/super-admin-bootstrap.md): bootstrap y recuperación de `super_admin`.
+- [quotas-retention.md](../operations/quotas-retention.md)
+- [technical-readiness-v1.5.md](../operations/technical-readiness-v1.5.md)
+- Despliegue: [docker.md](../deployment/docker.md), [compose-topology.md](../deployment/compose-topology.md), [environment-decisions.md](../deployment/environment-decisions.md).
+
+### Pruebas y aceptación
+
+- [integration-testing-postgresql.md](../testing/integration-testing-postgresql.md): Testcontainers con PostgreSQL 17.
+- [criteria.md](../acceptance/criteria.md): criterios de aceptación.
+
+## Históricos (solo trazabilidad)
+
+- [PENDING-DECISIONS.md](PENDING-DECISIONS.md): historial de las propuestas PD-01..PD-08, todas aprobadas.
+- [CHANGELOG-v1.5.md](CHANGELOG-v1.5.md)
+- Informes de auditoría del 2026-11-15:
+  - [repository-sanitization-report.md](../operations/repository-sanitization-report.md)
+  - [decision-closure-report.md](../operations/decision-closure-report.md)
+  - [decision-closure-report-tp15-tp20.md](../operations/decision-closure-report-tp15-tp20.md)
+  - [documentation-consolidation-report.md](../operations/documentation-consolidation-report.md)
+
+## Frontend (`notification-admin`, repositorio independiente)
+
+Rutas dentro de ese repositorio; no se pueden enlazar desde aquí:
+
+- `docs/architecture/`
+- `docs/api/management-api-consumption.md`
+- `docs/security/frontend-security.md`
+- `docs/deployment/docker.md`
+- `docs/acceptance/criteria.md`

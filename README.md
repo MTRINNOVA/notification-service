@@ -57,7 +57,7 @@ dotnet list NotificationService.sln package --outdated
 dotnet list NotificationService.sln package --vulnerable --include-transitive
 ```
 
-Las pruebas actuales (unitarias, de composición y de arquitectura) no requieren Docker. A partir de la Fase 2, las pruebas de integración de persistencia usarán **Testcontainers con PostgreSQL** y necesitarán Docker en ejecución ([integration-testing-postgresql.md](docs/testing/integration-testing-postgresql.md)).
+Las pruebas actuales (unitarias, de composición y de arquitectura) no requieren Docker. A partir de la Fase 2, las pruebas de integración de persistencia usarán **Testcontainers con PostgreSQL 17** y necesitarán Docker en ejecución ([integration-testing-postgresql.md](docs/testing/integration-testing-postgresql.md)).
 
 Ejecutar hosts (requieren la cadena de conexión configurada):
 
@@ -96,7 +96,9 @@ Aún no hay Docker Compose. Traefik es externo y nunca forma parte de este repos
 ## Decisiones y pendientes
 
 - Decisiones aprobadas: [docs/adr/](docs/adr/), [DECISIONS-v1.5.md](docs/project/DECISIONS-v1.5.md).
-- Registro de las decisiones PD-01 a PD-08 (todas aprobadas el 2026-11-15): [PENDING-DECISIONS.md](docs/project/PENDING-DECISIONS.md); cierre: [decision-closure-report.md](docs/operations/decision-closure-report.md).
+- Historial de las decisiones PD-01 a PD-08 (todas aprobadas): [PENDING-DECISIONS.md](docs/project/PENDING-DECISIONS.md).
 - Catálogo de códigos de error de la API: [error-codes.md](docs/api/error-codes.md).
-- Decisiones técnicas TP-02 y TP-15 a TP-20: [decision-closure-report-tp15-tp20.md](docs/operations/decision-closure-report-tp15-tp20.md); bootstrap de `super_admin`: [super-admin-bootstrap.md](docs/operations/super-admin-bootstrap.md).
-- Pendientes técnicos: [technical-pending-register.md](docs/operations/technical-pending-register.md).
+- Contrato HTTP v1: [openapi.yaml](docs/api/openapi.yaml) es la **fuente normativa única** ([api-design.md](docs/api/api-design.md#fuente-de-verdad)).
+- Bootstrap de `super_admin`: [super-admin-bootstrap.md](docs/operations/super-admin-bootstrap.md).
+- **Registro único de pendientes:** [technical-pending-register.md](docs/operations/technical-pending-register.md).
+- Índice completo (normativos e históricos): [notification-architecture-index.md](docs/project/notification-architecture-index.md). Los informes de `docs/operations/*report*.md` son históricos.

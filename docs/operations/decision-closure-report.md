@@ -1,5 +1,7 @@
 # Informe de cierre de decisiones PD-01 a PD-08 — 2026-11-15
 
+> **Documento histórico** (evidencia de la auditoría del 2026-11-15). No es fuente operativa: el estado vigente de los pendientes está en [technical-pending-register.md](technical-pending-register.md) y las decisiones en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
+
 ## 1. Resumen ejecutivo
 
 Las ocho decisiones PD-01 a PD-08, **aprobadas expresamente por el usuario**, quedaron incorporadas a sus documentos normativos:

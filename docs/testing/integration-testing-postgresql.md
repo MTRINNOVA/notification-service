@@ -10,7 +10,7 @@ Las pruebas de integración de persistencia usan **Testcontainers para .NET** co
 
 | Tema | Regla |
 |---|---|
-| Imagen | Versión fijada de forma explícita (tag `major.minor` y, cuando sea posible, digest). **Nunca `latest`.** Debe coincidir con la versión mayor de PostgreSQL de producción, que aún no está fijada ([provider-contracts-v1.5.md](../providers/provider-contracts-v1.5.md)). Se elige al implementar la Fase 2 y se registra en este documento |
+| Imagen | **PostgreSQL 17**, la misma versión principal que desarrollo y producción (confirmada el 2026-11-15). Tag con versión patch explícita (`postgres:17.<patch>`) y, cuando corresponda, digest. **Nunca `latest`.** El patch concreto se fija al implementar la Fase 2 y se registra en este documento |
 | Paquetes | Testcontainers (módulo PostgreSQL) y Npgsql se añaden en la Fase 2 a `Directory.Packages.props`, con versiones estables y compatibles, y solo en `NotificationService.Infrastructure.Tests` (o en los proyectos de prueba que lo necesiten) |
 | Ciclo de vida | Un contenedor por ejecución de la colección de pruebas (fixture compartida de xUnit), arrancado antes de las pruebas y eliminado al terminar. No hay estado persistente entre ejecuciones |
 | Esquema | Las migraciones EF Core se aplican al contenedor antes de las pruebas que lo requieran, con el mismo mecanismo que en release. Nunca `EnsureCreated` para validar el esquema real |

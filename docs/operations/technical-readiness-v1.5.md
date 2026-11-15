@@ -41,14 +41,7 @@ La implementación de un adaptador queda condicionada a la validación del contr
 
 ## Pendientes de producción
 
-1. Dominio raíz y DNS definitivos.
-2. Nombre exacto de la red Traefik y labels.
-3. Confirmar qué servicios se alojan en VPS compartido o separado.
-4. Paths, filesystem, UID/GID, espacio libre y backups externos.
-5. RPO/RTO y prueba de restauración.
-6. Límites CPU/RAM/disco y observabilidad.
-7. Dimensionamiento según cantidad de organizaciones, números WhatsApp, dispositivos SMS, adjuntos y mezcla de canales.
-8. Rotación de credenciales del ZIP legado y limpieza del historial Git si fueron versionadas.
+Migrados el 2026-11-15 al registro operativo único [technical-pending-register.md](technical-pending-register.md): dominio/DNS, red Traefik, ubicación de servicios y almacenamiento → TP-27; RPO/RTO y restauración → TP-29; límites, observabilidad y dimensionamiento → TP-30; credenciales del ZIP legado → TP-31.
 
 ## Alcance de v1
 

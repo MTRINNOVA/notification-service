@@ -72,4 +72,4 @@ Todos usan multi-stage con build en Release, SDK fijado a `global.json`, restore
 
 ## Pendiente antes de producción
 
-Fijar versiones/digests de imágenes, credenciales, nombres de redes reales, rutas, recursos, backups, TLS, DNS y políticas de firewall. No copiar valores secretos a Portainer como texto en archivos versionados.
+Registrado en [technical-pending-register.md](../operations/technical-pending-register.md): versiones/digests (TP-11), infraestructura, redes, DNS y rutas (TP-27), backups (TP-29) y recursos (TP-30). No copiar valores secretos a Portainer como texto en archivos versionados. PostgreSQL de la plataforma: versión principal **17** ([DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md)).

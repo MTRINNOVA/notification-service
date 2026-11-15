@@ -1,142 +1,135 @@
-# Inventario de endpoints — contrato funcional
+# Inventario de endpoints — v1
 
-Este inventario complementa `openapi.yaml`. El YAML de esta versión contiene esquemas y operaciones representativas para fijar convenciones; antes de implementar cada módulo, todas las rutas de este inventario deben incorporarse al OpenAPI versionado y revisarse mediante contract review.
+**Documento derivado.** Resume las operaciones de [openapi.yaml](openapi.yaml), que es la **fuente normativa única** del contrato HTTP v1 ([api-design.md](api-design.md#fuente-de-verdad)). No define contrato propio: ante cualquier discrepancia prevalece `openapi.yaml`, y este inventario se regenera a partir de él.
+
+Operaciones: **100**.
 
 ## Authentication API — `/api/v1/management/auth`
 
-- `POST /login`
-- `POST /refresh`
-- `POST /logout`
-- `GET /me`
-- `PUT /active-organization`
+| Método | Ruta | `operationId` | Autenticación / permiso |
+|---|---|---|---|
+| PUT | `/active-organization` | `selectActiveOrganization` | JWT + membresía/rol |
+| POST | `/login` | `login` | Credenciales de usuario (sin sesión previa) |
+| POST | `/logout` | `logout` | Cookie `HttpOnly` del refresh token + CSRF (descripción de la operación) |
+| GET | `/me` | `getCurrentUser` | JWT + membresía/rol |
+| POST | `/refresh` | `refreshSession` | Cookie `HttpOnly` del refresh token + CSRF (descripción de la operación) |
 
 ## Public API — `/api/v1/public`
 
-| Método | Ruta                                                            | Permiso                |
-| ------ | --------------------------------------------------------------- | ---------------------- |
-| POST   | `/notifications`                                                | `notifications.send`   |
-| POST   | `/notifications/bulk`                                           | `notifications.send`   |
-| GET    | `/notifications`                                                | `notifications.read`   |
-| GET    | `/notifications/{notificationId}`                               | `notifications.read`   |
-| GET    | `/notifications/{notificationId}/events`                        | `notifications.read`   |
-| POST   | `/notifications/{notificationId}/cancel`                        | `notifications.cancel` |
-| POST   | `/notifications/{notificationId}/retry` (reenvío manual, TP-19) | `notifications.retry`  |
-| POST   | `/attachments`                                                  | `attachments.upload`   |
-| GET    | `/templates`                                                    | `templates.read`       |
-| GET    | `/templates/{code}`                                             | `templates.read`       |
+| Método | Ruta | `operationId` | Autenticación / permiso |
+|---|---|---|---|
+| POST | `/attachments` | `uploadAttachment` | `attachments.upload` |
+| GET | `/attachments/{attachmentId}` | `getAttachment` | API Key — **scope no definido** (TP-28) |
+| GET | `/notifications` | `listNotifications` | `notifications.read` |
+| POST | `/notifications` | `createNotification` | `notifications.send` |
+| POST | `/notifications/bulk` | `createBulkNotifications` | `notifications.send` |
+| GET | `/notifications/{notificationId}` | `getNotificationById` | `notifications.read` |
+| POST | `/notifications/{notificationId}/cancel` | `cancelNotification` | `notifications.cancel` |
+| GET | `/notifications/{notificationId}/events` | `listNotificationEvents` | `notifications.read` |
+| POST | `/notifications/{notificationId}/retry` | `retryNotification` | `notifications.retry` (actor: la aplicación, TP-21) |
+| GET | `/templates` | `listPublicTemplates` | `templates.read` |
+| GET | `/templates/{code}` | `getPublicTemplate` | `templates.read` |
 
 ## Management API — `/api/v1/management`
 
-### Organizaciones
-
-- `GET /organizations`
-- `POST /organizations`
-- `GET /organizations/{organizationId}`
-- `PUT /organizations/{organizationId}`
-- `PATCH /organizations/{organizationId}/status`
-
-### Aplicaciones
-
-- `GET /applications`
-- `POST /applications`
-- `GET /applications/{applicationId}`
-- `PUT /applications/{applicationId}`
-- `PATCH /applications/{applicationId}/status`
-- `PUT /applications/{applicationId}/permissions`
-- `PUT /applications/{applicationId}/limits`
-
-### API Keys
-
-- `GET /applications/{applicationId}/api-keys`
-- `POST /applications/{applicationId}/api-keys`
-- `POST /applications/{applicationId}/api-keys/{keyId}/rotate`
-- `DELETE /applications/{applicationId}/api-keys/{keyId}`
-
-### Usuarios y roles
-
-- `GET /organizations/{organizationId}/memberships`, `POST /organizations/{organizationId}/memberships`
-- `PUT /organizations/{organizationId}/memberships/{membershipId}/roles`
-- `GET /users`, `POST /users`, `GET /users/{userId}`, `PUT /users/{userId}`, `PATCH /users/{userId}/status`
-- `GET /roles`, `GET /roles/{roleId}`: catálogo de roles del sistema, solo lectura (TP-20)
-- `PUT /roles/{roleId}/permissions`: solo `super_admin`, auditado
-- Los roles se asignan únicamente por membresía. `POST /roles`, `PUT /roles/{roleId}` y `PUT /users/{userId}/roles` quedan **retirados** (TP-16/TP-20)
-
-### Catálogo y cuentas de proveedores
-
-- `GET /providers/definitions`
-- `GET /providers/accounts`
-- `POST /providers/accounts`
-- `GET /providers/accounts/{providerAccountId}`
-- `PUT /providers/accounts/{providerAccountId}`
-- `DELETE /providers/accounts/{providerAccountId}` (deshabilitación lógica por defecto)
-- `POST /providers/accounts/{providerAccountId}/test`
-- `GET /providers/accounts/{providerAccountId}/health`
-- `POST /providers/accounts/{providerAccountId}/enable`
-- `POST /providers/accounts/{providerAccountId}/disable`
-- `POST /providers/accounts/{providerAccountId}/credentials/rotate`
-
-### Instancias WhatsApp
-
-- `GET /providers/accounts/{providerAccountId}/instances`
-- `POST /providers/accounts/{providerAccountId}/instances`
-- `POST /providers/instances/{instanceId}/connect`
-- `GET /providers/instances/{instanceId}/qr`
-- `GET /providers/instances/{instanceId}/status`
-- `POST /providers/instances/{instanceId}/disconnect`
-- `POST /providers/instances/{instanceId}/reconnect`
-- `DELETE /providers/instances/{instanceId}`
-
-### Remitentes
-
-- `GET /senders`, `GET /senders/{senderId}`
-- `PUT /applications/{applicationId}/senders`
-
-### Plantillas
-
-- `GET /templates`
-- `POST /templates`
-- `GET /templates/{templateId}`
-- `PUT /templates/{templateId}`
-- `DELETE /templates/{templateId}` (deshabilitación lógica)
-- `POST /templates/{templateId}/versions`
-- `GET /templates/{templateId}/versions`
-- `POST /templates/{templateId}/preview`
-- `POST /templates/{templateId}/test`
-
-### Campañas y programación
-
-- `GET /campaigns`, `POST /campaigns`, `GET /campaigns/{campaignId}`, `PUT /campaigns/{campaignId}`
-- `POST /campaigns/{campaignId}/start`
-- `POST /campaigns/{campaignId}/pause`
-- `POST /campaigns/{campaignId}/cancel`
-- `GET /campaigns/{campaignId}/statistics`
-- `GET /campaigns/{campaignId}/recipients`
-- `POST /scheduled-notifications`
-- `GET /scheduled-notifications`
-- `GET /scheduled-notifications/{scheduleId}`
-- `DELETE /scheduled-notifications/{scheduleId}`
-
-### Dashboard y auditoría
-
-- `GET /dashboard/summary`
-- `GET /dashboard/deliveries`
-- `GET /dashboard/providers-health`
-- `GET /dashboard/consumption`
-- `GET /audit/events`
-- `GET /audit/notifications/{notificationId}`
+| Método | Ruta | `operationId` | Autenticación / permiso |
+|---|---|---|---|
+| GET | `/applications` | `listApplications` | JWT + membresía/rol |
+| POST | `/applications` | `createApplication` | JWT + membresía/rol |
+| GET | `/applications/{applicationId}/api-keys` | `listApiKeys` | JWT + membresía/rol |
+| POST | `/applications/{applicationId}/api-keys` | `createApiKey` | JWT + membresía/rol |
+| DELETE | `/applications/{applicationId}/api-keys/{keyId}` | `revokeApiKey` | JWT + membresía/rol |
+| POST | `/applications/{applicationId}/api-keys/{keyId}/rotate` | `rotateApiKey` | JWT + membresía/rol |
+| PUT | `/applications/{applicationId}/limits` | `setApplicationLimits` | JWT + membresía/rol |
+| PUT | `/applications/{applicationId}/permissions` | `setApplicationPermissions` | JWT + membresía/rol |
+| PUT | `/applications/{applicationId}/senders` | `assignApplicationSenders` | JWT + membresía/rol |
+| PATCH | `/applications/{applicationId}/status` | `updateApplicationStatus` | JWT + membresía/rol |
+| GET | `/applications/{resourceId}` | `getApplication` | JWT + membresía/rol |
+| PUT | `/applications/{resourceId}` | `updateApplication` | JWT + membresía/rol |
+| GET | `/audit/events` | `listAuditEvents` | JWT + membresía/rol |
+| GET | `/audit/notifications/{notificationId}` | `getNotificationAudit` | JWT + membresía/rol |
+| GET | `/campaigns` | `listCampaigns` | JWT + membresía/rol |
+| POST | `/campaigns` | `createCampaign` | JWT + membresía/rol |
+| POST | `/campaigns/{campaignId}/cancel` | `cancelCampaign` | JWT + membresía/rol |
+| POST | `/campaigns/{campaignId}/pause` | `pauseCampaign` | JWT + membresía/rol |
+| GET | `/campaigns/{campaignId}/recipients` | `listCampaignRecipients` | JWT + membresía/rol |
+| POST | `/campaigns/{campaignId}/start` | `startCampaign` | JWT + membresía/rol |
+| GET | `/campaigns/{campaignId}/statistics` | `getCampaignStatistics` | JWT + membresía/rol |
+| GET | `/campaigns/{resourceId}` | `getCampaign` | JWT + membresía/rol |
+| PUT | `/campaigns/{resourceId}` | `updateCampaign` | JWT + membresía/rol |
+| GET | `/dashboard/consumption` | `getDashboardConsumption` | JWT + membresía/rol |
+| GET | `/dashboard/deliveries` | `getDashboardDeliveries` | JWT + membresía/rol |
+| GET | `/dashboard/providers-health` | `getDashboardProvidersHealth` | JWT + membresía/rol |
+| GET | `/dashboard/summary` | `getDashboardSummary` | JWT + membresía/rol |
+| GET | `/organizations` | `listOrganizations` | JWT + membresía/rol |
+| POST | `/organizations` | `createOrganization` | JWT + membresía/rol |
+| GET | `/organizations/{organizationId}/memberships` | `listMemberships` | JWT + membresía/rol |
+| POST | `/organizations/{organizationId}/memberships` | `createMembership` | JWT + membresía/rol |
+| PUT | `/organizations/{organizationId}/memberships/{membershipId}/roles` | `setMembershipRoles` | JWT + membresía/rol |
+| PATCH | `/organizations/{organizationId}/memberships/{membershipId}/status` | `updateMembershipStatus` | JWT + membresía/rol |
+| PATCH | `/organizations/{organizationId}/status` | `updateOrganizationStatus` | JWT + membresía/rol |
+| GET | `/organizations/{resourceId}` | `getOrganization` | JWT + membresía/rol |
+| PUT | `/organizations/{resourceId}` | `updateOrganization` | JWT + membresía/rol |
+| GET | `/providers/accounts` | `listProviderAccounts` | JWT + membresía/rol |
+| POST | `/providers/accounts` | `createProviderAccount` | JWT + membresía/rol |
+| POST | `/providers/accounts/{providerAccountId}/credentials/rotate` | `rotateProviderCredentials` | JWT + membresía/rol |
+| POST | `/providers/accounts/{providerAccountId}/disable` | `disableProviderAccount` | JWT + membresía/rol |
+| POST | `/providers/accounts/{providerAccountId}/enable` | `enableProviderAccount` | JWT + membresía/rol |
+| GET | `/providers/accounts/{providerAccountId}/health` | `getProviderHealth` | JWT + membresía/rol |
+| GET | `/providers/accounts/{providerAccountId}/instances` | `listProviderInstances` | JWT + membresía/rol |
+| POST | `/providers/accounts/{providerAccountId}/instances` | `createProviderInstance` | JWT + membresía/rol |
+| POST | `/providers/accounts/{providerAccountId}/test` | `testProviderAccount` | JWT + membresía/rol |
+| GET | `/providers/accounts/{resourceId}` | `getProviderAccount` | JWT + membresía/rol |
+| PUT | `/providers/accounts/{resourceId}` | `updateProviderAccount` | JWT + membresía/rol |
+| DELETE | `/providers/accounts/{resourceId}` | `deleteProviderAccount` | JWT + membresía/rol |
+| GET | `/providers/definitions` | `listProviderDefinitions` | JWT + membresía/rol |
+| DELETE | `/providers/instances/{instanceId}` | `deleteProviderInstance` | JWT + membresía/rol |
+| POST | `/providers/instances/{instanceId}/connect` | `connectProviderInstance` | JWT + membresía/rol |
+| POST | `/providers/instances/{instanceId}/disconnect` | `disconnectProviderInstance` | JWT + membresía/rol |
+| GET | `/providers/instances/{instanceId}/qr` | `getProviderInstanceQr` | JWT + membresía/rol |
+| POST | `/providers/instances/{instanceId}/reconnect` | `reconnectProviderInstance` | JWT + membresía/rol |
+| GET | `/providers/instances/{instanceId}/status` | `getProviderInstanceStatus` | JWT + membresía/rol |
+| GET | `/roles` | `listRoles` | JWT + membresía/rol |
+| GET | `/roles/{resourceId}` | `getRole` | JWT + membresía/rol |
+| PUT | `/roles/{roleId}/permissions` | `setSystemRolePermissions` | JWT + `super_admin` activo |
+| GET | `/scheduled-notifications` | `listScheduledNotifications` | JWT + membresía/rol |
+| POST | `/scheduled-notifications` | `createScheduledNotification` | JWT + membresía/rol |
+| GET | `/scheduled-notifications/{scheduleId}` | `getScheduledNotification` | JWT + membresía/rol |
+| DELETE | `/scheduled-notifications/{scheduleId}` | `cancelScheduledNotification` | JWT + membresía/rol |
+| GET | `/senders` | `listSenders` | JWT + membresía/rol |
+| GET | `/senders/{senderId}` | `getSender` | JWT + membresía/rol |
+| GET | `/templates` | `listTemplates` | JWT + membresía/rol |
+| POST | `/templates` | `createTemplate` | JWT + membresía/rol |
+| GET | `/templates/{resourceId}` | `getTemplate` | JWT + membresía/rol |
+| PUT | `/templates/{resourceId}` | `updateTemplate` | JWT + membresía/rol |
+| DELETE | `/templates/{resourceId}` | `deleteTemplate` | JWT + membresía/rol |
+| POST | `/templates/{templateId}/preview` | `previewTemplate` | JWT + membresía/rol |
+| POST | `/templates/{templateId}/test` | `testTemplate` | JWT + membresía/rol |
+| GET | `/templates/{templateId}/versions` | `listTemplateVersions` | JWT + membresía/rol |
+| POST | `/templates/{templateId}/versions` | `createTemplateVersion` | JWT + membresía/rol |
+| GET | `/users` | `listUsers` | JWT + membresía/rol |
+| POST | `/users` | `createUser` | JWT + membresía/rol |
+| GET | `/users/{resourceId}` | `getUser` | JWT + membresía/rol |
+| PUT | `/users/{resourceId}` | `updateUser` | JWT + membresía/rol |
+| PATCH | `/users/{userId}/status` | `updateUserStatus` | JWT + membresía/rol |
 
 ## Platform API — `/api/v1/platform`
 
-Solo `super_admin` activo; operaciones auditadas (TP-15).
-
-- `GET /super-admins`
-- `POST /super-admins`
-- `POST /super-admins/{assignmentId}/revoke`
+| Método | Ruta | `operationId` | Autenticación / permiso |
+|---|---|---|---|
+| GET | `/super-admins` | `listSuperAdminAssignments` | JWT + `super_admin` activo |
+| POST | `/super-admins` | `grantSuperAdmin` | JWT + `super_admin` activo |
+| POST | `/super-admins/{assignmentId}/revoke` | `revokeSuperAdmin` | JWT + `super_admin` activo |
 
 ## Webhook API — `/api/v1/webhooks`
 
-- `POST /whatsapp/evolution/{providerAccountId}`
-- `POST /email/{providerAccountId}`
-- `POST /sms/{providerAccountId}`
+| Método | Ruta | `operationId` | Autenticación / permiso |
+|---|---|---|---|
+| POST | `/email/{providerAccountId}` | `receiveEmailWebhook` | Firma/secreto del proveedor |
+| POST | `/sms/{providerAccountId}` | `receiveSmsWebhook` | Firma/secreto del proveedor |
+| POST | `/whatsapp/evolution/{providerAccountId}` | `receiveEvolutionWebhook` | Firma/secreto del proveedor |
 
-Los métodos, headers y esquemas de webhook deben alinearse con las versiones exactas de cada proveedor instaladas. No normalizar el payload externo antes de verificar autenticidad; guardar un evento bruto controlado y luego transformarlo a un evento interno.
+## Notas
+
+- Los roles de organización se asignan solo por membresía; no existe asignación directa de roles a un usuario. Las operaciones `POST /management/roles`, `PUT /management/roles/{roleId}` y `PUT /management/users/{userId}/roles` están **retiradas** (TP-16/TP-20).
+- Los métodos, cabeceras y esquemas de webhook deben alinearse con las versiones exactas de cada proveedor instaladas. No normalizar el payload externo antes de verificar su autenticidad; guardar un evento bruto controlado y luego transformarlo en un evento interno.

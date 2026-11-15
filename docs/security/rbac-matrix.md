@@ -16,7 +16,8 @@ La autorización se evalúa por usuario + membresía activa + organización sele
 | Crear/editar plantillas                 |                      Global |                   Sí |      Sí, si se concede |               No |                              No |
 | Enviar notificaciones                   |              No por defecto |        Según permiso |          Según permiso |               No | Sí, solo su aplicación y scopes |
 | Consultar notificaciones                |        Global con auditoría |                   Sí | Sí, dentro de permisos | Sí, solo lectura |          Sí, solo su aplicación |
-| Cancelar/reintentar                     |        Global con auditoría |                   Sí |          Según permiso |               No |                     Según scope |
+| Cancelar notificaciones | Global con auditoría | Sí | Según permiso | No | Según scope (`notifications.cancel`) |
+| Reenvío manual (`retry`) | No (solo Public API) | No (solo Public API) | No (solo Public API) | No | Sí: scope `notifications.retry`, solo su aplicación; el actor auditado es la aplicación (TP-21) |
 | Administrar campañas                    |                      Global |                   Sí |          Según permiso |          Lectura |           Según scope explícito |
 | Dashboard y consumo                     |                      Global |                   Sí |          Según permiso |      Sí, lectura |                              No |
 | Consultar auditoría                     |                      Global |  Sí, su organización |          Según permiso |    Según permiso |                              No |
@@ -35,5 +36,6 @@ La autorización se evalúa por usuario + membresía activa + organización sele
 - `super_admin` no puede asignarse como rol de organización. El intento se rechaza con `422 ROLE_NOT_ASSIGNABLE`. Su concesión y revocación se auditan.
 - El usuario debe seleccionar una organización activa cuando pertenece a varias; el backend valida membresía activa.
 - Las API Keys no heredan permisos humanos; sus scopes son propios y limitados a una aplicación.
+- **Reenvío manual (TP-21):** solo lo solicita una aplicación por la Public API (`POST /public/notifications/{notificationId}/retry`) con el scope `notifications.retry`. No existe una operación de reenvío para usuarios del panel en v1. La auditoría registra `actor_type = APPLICATION` y la API Key de origen.
 - Acciones sensibles (secretos, API Keys, QR, desconexión, cambios de cuota, exportación) requieren permiso específico y auditoría.
 - El frontend puede ocultar acciones no autorizadas, pero la API siempre aplica autorización.

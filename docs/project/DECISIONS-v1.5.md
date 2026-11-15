@@ -112,29 +112,29 @@ Aprobadas expresamente por el usuario. Precisan, sin sustituirlas, las decisione
 | PD-07 | Una imagen por host: `notification-api`, `notification-worker`, `notification-scheduler`                                                                                                   | [docker.md](../deployment/docker.md)                                                                              |
 | PD-08 | `openapi.yaml` declara `409`, `422`, `429` (y `413`/`415`/`503` donde corresponde) por operación, con componentes RFC 9457 reutilizables                                                   | [openapi.yaml](../api/openapi.yaml)                                                                               |
 
-## Decisiones técnicas TP-02 y TP-15 a TP-20 (aprobadas el 2026-11-15)
+## Decisiones técnicas TP-02 y TP-15 a TP-22 (aprobadas el 2026-11-15)
 
 | ID    | Decisión                                                                                                                                                  | Documento normativo                                                                                           |
 | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| TP-02 | Testcontainers con PostgreSQL real para las pruebas de integración de persistencia                                                                        | [integration-testing-postgresql.md](../testing/integration-testing-postgresql.md)                             |
+| TP-02 | Testcontainers con PostgreSQL 17 real para las pruebas de integración de persistencia                                                                        | [integration-testing-postgresql.md](../testing/integration-testing-postgresql.md)                             |
 | TP-15 | Bootstrap manual e idempotente del primer `super_admin` (`SYSTEM_BOOTSTRAP`) y Platform API para concesiones y revocaciones; protección del último activo | [ADR-0011](../adr/0011-admin-identity.md), [super-admin-bootstrap.md](../operations/super-admin-bootstrap.md) |
 | TP-16 | Contrato OpenAPI normalizado (rutas, paginación, operaciones del inventario); retirada de `PUT /users/{userId}/roles`                                     | [openapi.yaml](../api/openapi.yaml)                                                                           |
 | TP-17 | Puerto opcional `IProviderAccountDiagnostics` para prueba de conexión y salud                                                                             | [hexagonal.md](../architecture/hexagonal.md)                                                                  |
 | TP-18 | Relación muchos a muchos `notification_attachments`                                                                                                       | [erd.md](../data/erd.md)                                                                                      |
 | TP-19 | Reintento técnico, reenvío manual y conciliación separados; conciliación configurable por proveedor                                                       | [ADR-0012](../adr/0012-delivery-semantics.md)                                                                 |
 | TP-20 | Sin roles personalizados en v1: catálogo cerrado `organization_admin`, `operator`, `viewer`                                                               | [ADR-0011](../adr/0011-admin-identity.md), [rbac-matrix.md](../security/rbac-matrix.md)                       |
+| TP-21 | Reenvío manual solicitado por la aplicación consumidora (API Key con scope `notifications.retry`); actor auditado `APPLICATION` | [ADR-0012](../adr/0012-delivery-semantics.md), [rbac-matrix.md](../security/rbac-matrix.md) |
+| TP-22 | `openapi.yaml` como fuente normativa única del contrato HTTP; `PATCH .../memberships/{membershipId}/status` incorporada; `PATCH /senders/{id}/default` descartada; esquemas sin uso eliminados | [api-design.md](../api/api-design.md), [openapi.yaml](../api/openapi.yaml) |
+
+
+## Base de datos (confirmada el 2026-11-15)
+
+- **PostgreSQL 17** como versión principal en desarrollo, pruebas y producción.
+- Testcontainers usa PostgreSQL 17 para las pruebas de integración (TP-02).
+- Nunca `latest`: la imagen concreta se fija con versión patch explícita (`postgres:17.<patch>`) y, cuando corresponda, con digest (TP-11). No se modificaron configuraciones ejecutables ni Compose en esta decisión.
 
 ## Pendientes técnicos que no son decisiones abiertas
 
-Estos puntos requieren inspección o pruebas y no deben confundirse con dudas de negocio ya resueltas:
-
-1. Validar en ejecución Evolution v2.3.7: creación de instancia, QR, persistencia, reconexión, webhooks y envío de texto/media.
-2. Fijar digest de Evolution y verificar que coincide con la imagen realmente desplegada.
-3. Fijar release/digest de SMSGate; confirmar versión de app Android, dispositivo y SIM; resolver la discrepancia entre Basic Auth y token privado del ZIP.
-4. Validar Postfix/SMTP, autenticación, DNS (SPF, DKIM, DMARC, PTR) y rebotes.
-5. Completar OpenAPI 3.1, ERD/diccionario y contratos de error con las decisiones de este documento. _(2026-11-15: ERD aprobado para v1, catálogo de errores y respuestas 409/422/429 incorporados. Quedan pendientes las rutas del inventario aún no presentes en OpenAPI; ver [technical-pending-register.md](../operations/technical-pending-register.md).)_
-6. Cerrar dominios/subdominios, nombre de red Traefik, rutas/UID/GID, recursos y almacenamiento del VPS.
-7. Definir y probar RPO/RTO y restauración de backups.
-8. Ejecutar pruebas de aislamiento multi-tenant, carga y recuperación.
+La lista original de ocho puntos se migró el 2026-11-15 al **registro operativo único** [technical-pending-register.md](../operations/technical-pending-register.md): Evolution → TP-24; SMSGate → TP-25; SMTP/DNS → TP-26; dominios, red Traefik, rutas y almacenamiento → TP-27; RPO/RTO → TP-29; pruebas de aislamiento, carga y recuperación → TP-32. El punto de completar OpenAPI, ERD y contratos de error quedó resuelto con PD-01..PD-08, TP-16 y TP-22.
 
 **Estado final:** las nueve decisiones consultadas quedan aceptadas. La programación sigue sin iniciarse; el siguiente entregable es consolidar estas decisiones en el modelo de datos, OpenAPI y criterios de aceptación antes de autorizar el desarrollo.

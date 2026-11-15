@@ -1,5 +1,7 @@
 # Informe de saneamiento del repositorio — 2026-11-15
 
+> **Documento histórico** (evidencia de la auditoría del 2026-11-15). No es fuente operativa: el estado vigente de los pendientes está en [technical-pending-register.md](technical-pending-register.md) y las decisiones en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
+
 **Alcance:** saneamiento técnico y documental de la fundación, previo a la Fase 2. **No se implementó la Fase 2** ni ninguna funcionalidad de negocio: sin entidades, `DbSet`, Fluent API, repositorios, migraciones, autenticación, RabbitMQ, Redis, MinIO, proveedores ni endpoints funcionales. No se modificaron ADR, `DECISIONS-v1.5.md` ni `openapi.yaml`. No se hicieron commits ni push.
 
 ## 1. Estado inicial
