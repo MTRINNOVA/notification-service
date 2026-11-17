@@ -1,6 +1,6 @@
 # Informe de saneamiento del repositorio — 2026-11-15
 
-> **Documento histórico** (evidencia de la auditoría del 2026-11-15). No es fuente operativa: el estado vigente de los pendientes está en [technical-pending-register.md](technical-pending-register.md) y las decisiones en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
+> **Documento histórico** (evidencia de la auditoría del 2026-11-15). No es fuente operativa: el estado vigente de los pendientes está en [technical-pending-register.md](../operations/technical-pending-register.md) y las decisiones en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
 
 **Alcance:** saneamiento técnico y documental de la fundación, previo a la Fase 2. **No se implementó la Fase 2** ni ninguna funcionalidad de negocio: sin entidades, `DbSet`, Fluent API, repositorios, migraciones, autenticación, RabbitMQ, Redis, MinIO, proveedores ni endpoints funcionales. No se modificaron ADR, `DECISIONS-v1.5.md` ni `openapi.yaml`. No se hicieron commits ni push.
 
@@ -110,7 +110,7 @@ Ninguna prueba usa servicios externos ni EF Core InMemory. No se eliminó ningun
 
 ### Documentación
 
-- Nuevos: [PENDING-DECISIONS.md](../project/PENDING-DECISIONS.md) (PD-01 a PD-08, todas **pendientes**), [technical-pending-register.md](technical-pending-register.md) (TP-01 a TP-14) y este informe.
+- Nuevos: [PENDING-DECISIONS.md](PENDING-DECISIONS.md) (PD-01 a PD-08, todas **pendientes**), [technical-pending-register.md](../operations/technical-pending-register.md) (TP-01 a TP-14) y este informe.
 - Actualizados: `docker.md`, `environment-decisions.md` y `compose-topology.md` (variables de host, convención de conexión, health, imágenes); `project-structure.md`; el índice; notas "pendiente de aprobación" en `rbac-matrix.md`, `rabbitmq-outbox.md`, `provider-contracts-v1.5.md`, `hexagonal.md`, `api-design.md` y `erd.md` (sin cambiar su contenido aprobado); `README.md`; `AGENTS.md`; `CLAUDE.md`.
 
 ## 4. Archivos modificados
@@ -127,9 +127,9 @@ Ninguna prueba usa servicios externos ni EF Core InMemory. No se eliminó ningun
 
 ## 5. Decisiones que requieren aprobación
 
-*Situación al cerrar el saneamiento:* PD-01 a PD-08 quedaron pendientes de aprobación ([PENDING-DECISIONS.md](../project/PENDING-DECISIONS.md)), junto con TP-02, TP-05, TP-06 y TP-07.
+*Situación al cerrar el saneamiento:* PD-01 a PD-08 quedaron pendientes de aprobación ([PENDING-DECISIONS.md](PENDING-DECISIONS.md)), junto con TP-02, TP-05, TP-06 y TP-07.
 
-> **Actualización 2026-11-15:** el usuario **aprobó PD-01 a PD-08**, que ya están incorporadas a los ADR, el ERD, la matriz RBAC, OpenAPI y la documentación de despliegue. Detalle en [decision-closure-report.md](decision-closure-report.md). Siguen requiriendo aprobación TP-02, TP-05, TP-06, TP-07 y los puntos abiertos TP-15 a TP-20 ([technical-pending-register.md](technical-pending-register.md)).
+> **Actualización 2026-11-15:** el usuario **aprobó PD-01 a PD-08**, que ya están incorporadas a los ADR, el ERD, la matriz RBAC, OpenAPI y la documentación de despliegue. Detalle en [decision-closure-report.md](decision-closure-report.md). Siguen requiriendo aprobación TP-02, TP-05, TP-06, TP-07 y los puntos abiertos TP-15 a TP-20 ([technical-pending-register.md](../operations/technical-pending-register.md)).
 
 ## 6. Riesgos técnicos pendientes
 

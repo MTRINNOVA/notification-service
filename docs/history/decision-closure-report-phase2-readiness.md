@@ -1,6 +1,6 @@
 # Informe de preparación documental de la Fase 2 — 2026-11-15/16
 
-> **Documento histórico** (evidencia de la tarea). No es fuente operativa: el estado vigente está en [technical-pending-register.md](technical-pending-register.md) y las decisiones en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
+> **Documento histórico** (evidencia de la tarea). No es fuente operativa: el estado vigente está en [technical-pending-register.md](../operations/technical-pending-register.md) y las decisiones en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
 
 **La Fase 2 no ha comenzado. No se ha modificado código.** La tarea fue exclusivamente documental.
 

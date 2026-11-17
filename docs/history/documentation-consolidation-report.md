@@ -1,6 +1,6 @@
 # Informe de consolidación documental — TP-21, TP-22 y fuente única de verdad (2026-11-15)
 
-> **Documento histórico** (evidencia de esta auditoría). El estado vigente de los pendientes está en [technical-pending-register.md](technical-pending-register.md) y las decisiones, en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
+> **Documento histórico** (evidencia de esta auditoría). El estado vigente de los pendientes está en [technical-pending-register.md](../operations/technical-pending-register.md) y las decisiones, en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
 
 Rama `main`, commit inicial `78b6b42`, con el árbol de trabajo limpio al empezar. **Tarea exclusivamente documental:** no se modificó código, proyectos, configuración ejecutable, Compose, CI/CD, migraciones ni paquetes. **No se inició la Fase 2.** No se hicieron commits ni push.
 

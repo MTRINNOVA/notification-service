@@ -39,7 +39,7 @@ Reglas comunes:
 Esta decisión **no** autoriza por sí misma los cambios siguientes. Cada uno se hará en su tarea, con las restricciones de `AGENTS.md`:
 
 1. **Hosts:** Worker y Scheduler usan hoy el host genérico (`Microsoft.NET.Sdk.Worker`) sin servidor HTTP. Exponer HTTP requiere un servidor HTTP mínimo (p. ej. Kestrel mediante la referencia de framework `Microsoft.AspNetCore.App`). Esto cambia los `.csproj` y la composición en `Common/*HostBuilderExtensions.cs`.
-2. **Imágenes:** la imagen `runtime` de .NET no incluye ASP.NET Core ni `curl`/`wget`. Habrá que pasar a la imagen `aspnet` o usar un binario de sonda propio, y ajustar el `HEALTHCHECK` sin añadir herramientas innecesarias. Esto afecta a los Dockerfiles (TP-01, TP-11).
+2. **Imágenes:** la imagen `runtime` de .NET no incluye ASP.NET Core ni `curl`/`wget`. Habrá que pasar a la imagen `aspnet` o usar un binario de sonda propio, y ajustar el `HEALTHCHECK` sin añadir herramientas innecesarias. Esto afecta a los Dockerfiles (TP-01).
 3. **Compose:** healthchecks de los servicios `notification-worker` y `notification-scheduler` cuando exista el Compose (TP-08).
 4. **Pruebas:** pruebas de composición que verifiquen los dos endpoints y que readiness no incluya checks ficticios (`Worker.Tests` y, cuando exista, `Scheduler.Tests`, TP-06).
 

@@ -21,7 +21,7 @@ La capacidad confirmada es una línea base inicial compartida, no una asignació
 
 ## Subdominios (variables; DNS reales sin fijar)
 
-Decisión aprobada ([PD-06](../project/PENDING-DECISIONS.md#pd-06-subdominios-y-dns)): usar siempre variables de configuración; los nombres DNS reales todavía no están fijados:
+Decisión aprobada ([PD-06](../history/PENDING-DECISIONS.md#pd-06-subdominios-y-dns)): usar siempre variables de configuración; los nombres DNS reales todavía no están fijados:
 
 - `NOTIFICATIONS_API_HOST`: API pública y de administración según autorización.
 - `NOTIFICATIONS_ADMIN_HOST`: panel administrativo.

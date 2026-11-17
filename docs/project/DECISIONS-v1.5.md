@@ -101,7 +101,7 @@ Meta WhatsApp Cloud API queda expresamente fuera de la primera versión.
 
 ## Decisiones de cierre PD-01 a PD-08 (aprobadas el 2026-11-15)
 
-Aprobadas expresamente por el usuario. Precisan, sin sustituirlas, las decisiones de negocio anteriores. Historial y alternativas: [PENDING-DECISIONS.md](PENDING-DECISIONS.md).
+Aprobadas expresamente por el usuario. Precisan, sin sustituirlas, las decisiones de negocio anteriores. Historial y alternativas: [PENDING-DECISIONS.md](../history/PENDING-DECISIONS.md).
 
 | ID    | Decisión                                                                                                                                                                                   | Documento normativo                                                                                               |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
@@ -156,7 +156,7 @@ Aprobadas expresamente por el usuario y especificadas en la documentación; **no
 
 ## Decisiones de preparación de la Fase 2 (aprobadas el 2026-11-15)
 
-Aprobadas expresamente por el usuario para cerrar los huecos documentales que impedían iniciar la persistencia. **No están implementadas.** Evidencia: [decision-closure-report-phase2-readiness.md](../operations/decision-closure-report-phase2-readiness.md).
+Aprobadas expresamente por el usuario para cerrar los huecos documentales que impedían iniciar la persistencia. **No están implementadas.** Evidencia: [decision-closure-report-phase2-readiness.md](../history/decision-closure-report-phase2-readiness.md).
 
 | ID    | Decisión | Documento normativo |
 | ----- | -------- | ------------------- |
@@ -172,6 +172,13 @@ Aprobadas expresamente por el usuario para cerrar los huecos documentales que im
 | TP-51 | Catálogo cerrado de permisos de rol (`RolePermissionCode`) y asignaciones iniciales | [rbac-matrix.md](../security/rbac-matrix.md) |
 | TP-52 | Rotación de API Key: fila nueva y revocación de la anterior en la misma transacción, sin solape | [erd.md](../data/erd.md), [openapi.yaml](../api/openapi.yaml) |
 | TP-53 | Alineación ERD ↔ OpenAPI: `applicationId` en plantillas, campañas y programaciones; columnas que faltaban; retirada de `notifications.priority` | [erd.md](../data/erd.md), [openapi.yaml](../api/openapi.yaml) |
+| TP-41 | Recuperación de sesión al cargar el panel con `resumeSession` (cookie + `Origin`, sin CSRF); serialización entre pestañas | [ADR-0011](../adr/0011-admin-identity.md), [admin-panel-auth-contract.md](../api/admin-panel-auth-contract.md) |
+| TP-42 | Se mantiene la distinción `401` (sesión) / `403` (CSRF u `Origin`); riesgo aceptado | [ADR-0011](../adr/0011-admin-identity.md) |
+| TP-54 | El secreto ZIP se purga al llegar a un estado terminal; las notificaciones `ZIP_AES256` no se reenvían | [erd.md](../data/erd.md), [ADR-0012](../adr/0012-delivery-semantics.md) |
+| TP-55 | Política NIST SP 800-63B (12 a 128 caracteres, lista de comunes y filtradas) y recuperación por reasignación de contraseña temporal | [ADR-0011](../adr/0011-admin-identity.md) |
+| TP-56 | Un gateway SMS por cuenta de proveedor; `notification_deliveries.sms_gateway_id` | [erd.md](../data/erd.md) |
+| TP-58 | Aviso de cierre 5 minutos antes (`sessionExpiresAt`/`sessionExpiresIn`) con reautenticación por contraseña en el propio aviso; el login revoca la sesión anterior | [ADR-0011](../adr/0011-admin-identity.md), [admin-panel-auth-contract.md](../api/admin-panel-auth-contract.md) |
+| TP-57 | Sesión del panel con duración absoluta de 60 minutos desde el login (sustituye los 7 días iniciales); access token de 15 minutos con renovación interna | [ADR-0011](../adr/0011-admin-identity.md), [erd.md](../data/erd.md) |
 
 **Fuera de v1** (revisión del sistema anterior `Notificaciones-master`, 2026-11-15): lista de supresión, registro de consentimiento (el opt-in es responsabilidad de la organización cliente), metadatos de origen normalizados (se usan los `metadata` libres) y prioridad de notificación. Detalle en [legacy-source-assessment.md](../providers/legacy-source-assessment.md).
 

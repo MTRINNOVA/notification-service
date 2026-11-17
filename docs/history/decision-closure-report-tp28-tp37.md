@@ -1,6 +1,6 @@
 # Informe de cierre de decisiones TP-28, TP-33 a TP-37 y TP-05 a TP-07 — 2026-11-15
 
-> **Documento histórico** (evidencia de la tarea del 2026-11-15). No es fuente operativa: el estado vigente está en [technical-pending-register.md](technical-pending-register.md) y las decisiones en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
+> **Documento histórico** (evidencia de la tarea del 2026-11-15). No es fuente operativa: el estado vigente está en [technical-pending-register.md](../operations/technical-pending-register.md) y las decisiones en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
 
 ## 1. Resumen
 

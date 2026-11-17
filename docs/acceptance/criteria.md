@@ -16,7 +16,9 @@
 - Access JWT de corta duración y validación de issuer, audience, firma, expiración y scopes/roles.
 - Refresh token opaco almacenado como hash, rotativo y en cookie `HttpOnly`, `Secure` y `SameSite` apropiado.
 - Reutilización de refresh token revoca la familia de sesión y genera evento de auditoría.
-- Operaciones autenticadas por cookie implementan protección CSRF.
+- La sesión vence 60 minutos después del login aunque el usuario esté activo: refresh y `resumeSession` responden `401` y el panel vuelve al login (TP-57). El panel avisa 5 minutos antes con una cuenta atrás y permite reautenticarse sin perder la página; la reautenticación revoca la sesión anterior (TP-58).
+- Operaciones autenticadas por cookie implementan protección CSRF. `resumeSession` (TP-41) es la excepción documentada y exige `Origin` válido con `SameSite=Strict`. Dos pestañas que recuperan la sesión a la vez no provocan la revocación de la familia, siempre que el panel serialice la rotación.
+- Las contraseñas cumplen la política TP-55 (12 a 128 caracteres; se rechazan las comunes o filtradas y las iguales al email). Reasignar una contraseña temporal revoca todas las sesiones del usuario y se audita.
 - API Keys se muestran una sola vez; se almacenan como hash, pueden rotarse/revocarse y tienen scopes/expiración. Sus scopes no superan los permisos de la aplicación (TP-48). La rotación crea una clave nueva y revoca la anterior sin solape (TP-52).
 - Un usuario creado con contraseña temporal solo puede cambiarla, consultar su perfil, refrescar y cerrar sesión hasta sustituirla (`403 PASSWORD_CHANGE_REQUIRED`, TP-46).
 - Ningún secreto de proveedor aparece en responses, frontend, logs o mensajes RabbitMQ.
@@ -54,7 +56,7 @@
 - Límites menores por aplicación no pueden exceder el límite efectivo de organización.
 - Validaciones fallidas no consumen cuota; aceptación sí; reintentos técnicos no vuelven a consumirla. Las notificaciones programadas consumen al ejecutarse, en el día local de ejecución (TP-44). En un lote, cada ítem aceptado consume y los rechazados no (TP-43).
 - El límite diario de la organización vive en `organization_limits` (WhatsApp 500 por defecto) y solo lo cambia `super_admin` (TP-45).
-- Un lote con ítems inválidos responde `202` con el resultado de cada ítem; los válidos se aceptan (TP-43).
+- Un lote con ítems inválidos responde `202` con el resultado de cada ítem; los válidos se aceptan.
 - El exceso de cuota devuelve `429` con `WHATSAPP_DAILY_QUOTA_EXCEEDED` (o `APPLICATION_DAILY_LIMIT_EXCEEDED`), `Retry-After` y `retryAt` cuando sean calculables.
 - Un límite de aplicación mayor que el de la organización se rechaza con `422 APPLICATION_LIMIT_EXCEEDS_ORGANIZATION_LIMIT`.
 - Todos los errores siguen RFC 9457 con `code` del catálogo [error-codes.md](../api/error-codes.md): `400` formato, `409` conflicto de estado/idempotencia, `422` regla de negocio.

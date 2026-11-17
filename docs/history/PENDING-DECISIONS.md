@@ -1,10 +1,10 @@
 # Registro de decisiones PD-01 a PD-08
 
-**Estado del documento:** registro histórico. **Las ocho decisiones fueron aprobadas expresamente por el usuario el 2026-11-15** y ya están incorporadas a sus documentos normativos (ADR, ERD, RBAC, OpenAPI, despliegue). Ver el resumen en [DECISIONS-v1.5.md](DECISIONS-v1.5.md#decisiones-de-cierre-pd-01-a-pd-08-aprobadas-el-2026-11-15) y el [informe de cierre](../operations/decision-closure-report.md).
+**Estado del documento:** registro histórico. **Las ocho decisiones fueron aprobadas expresamente por el usuario el 2026-11-15** y ya están incorporadas a sus documentos normativos (ADR, ERD, RBAC, OpenAPI, despliegue). Ver el resumen en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md#decisiones-de-cierre-pd-01-a-pd-08-aprobadas-el-2026-11-15) y el [informe de cierre](decision-closure-report.md).
 
 Se conservan el problema, el análisis y las alternativas de cada punto como contexto. **La fuente normativa vigente es el documento indicado en cada decisión, no este registro.**
 
-Origen: saneamiento del repositorio del 2026-11-15 ([repository-sanitization-report.md](../operations/repository-sanitization-report.md)).
+Origen: saneamiento del repositorio del 2026-11-15 ([repository-sanitization-report.md](repository-sanitization-report.md)).
 
 | ID                                                                   | Tema                                          | Estado                    | Decisión vigente en                                                                                               |
 | -------------------------------------------------------------------- | --------------------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
@@ -12,7 +12,7 @@ Origen: saneamiento del repositorio del 2026-11-15 ([repository-sanitization-rep
 | [PD-02](#pd-02-máquina-de-estados-de-notificación-entrega-e-intento) | Máquina de estados                            | **Aprobada** (2026-11-15) | [ADR-0012](../adr/0012-delivery-semantics.md), [erd.md](../data/erd.md)                                           |
 | [PD-03](#pd-03-puertos-de-proveedores)                               | Puertos de proveedores                        | **Aprobada** (2026-11-15) | [hexagonal.md](../architecture/hexagonal.md), [ADR-0004](../adr/0004-whatsapp-adapters.md)                        |
 | [PD-04](#pd-04-uso-de-400-409-y-422)                                 | Uso de 400 / 409 / 422                        | **Aprobada** (2026-11-15) | [api-design.md](../api/api-design.md), [error-codes.md](../api/error-codes.md)                                    |
-| [PD-05](#pd-05-timezone_override-de-aplicación)                      | `timezone_override` de aplicación             | **Aprobada** (2026-11-15) | [erd.md](../data/erd.md), [DECISIONS-v1.5.md](DECISIONS-v1.5.md)                                                  |
+| [PD-05](#pd-05-timezone_override-de-aplicación)                      | `timezone_override` de aplicación             | **Aprobada** (2026-11-15) | [erd.md](../data/erd.md), [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md)                                                  |
 | [PD-06](#pd-06-subdominios-y-dns)                                    | Subdominios y DNS                             | **Aprobada** (2026-11-15) | [docker.md](../deployment/docker.md)                                                                              |
 | [PD-07](#pd-07-estrategia-de-imágenes-docker)                        | Estrategia de imágenes Docker                 | **Aprobada** (2026-11-15) | [docker.md](../deployment/docker.md)                                                                              |
 | [PD-08](#pd-08-respuestas-409-y-429-ausentes-en-openapiyaml)         | Respuestas 409/429 ausentes en `openapi.yaml` | **Aprobada** (2026-11-15) | [openapi.yaml](../api/openapi.yaml)                                                                               |
@@ -220,7 +220,7 @@ Ninguno en persistencia. Debe resolverse antes de implementar el primer endpoint
 
 ### Reglas aprobadas (no cambian)
 
-Zona horaria IANA obligatoria por organización (predeterminada `America/Lima`). Las aplicaciones la heredan "salvo configuración explícita permitida". Instantes en UTC. La cuota diaria de WhatsApp es **agregada por organización** y se reinicia a las 00:00 de la zona horaria de la organización ([DECISIONS-v1.5.md](DECISIONS-v1.5.md) §8-9).
+Zona horaria IANA obligatoria por organización (predeterminada `America/Lima`). Las aplicaciones la heredan "salvo configuración explícita permitida". Instantes en UTC. La cuota diaria de WhatsApp es **agregada por organización** y se reinicia a las 00:00 de la zona horaria de la organización ([DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md) §8-9).
 
 ### Problema
 

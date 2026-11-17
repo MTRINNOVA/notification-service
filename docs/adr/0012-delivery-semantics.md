@@ -9,7 +9,7 @@
 
 ### Contexto
 
-El flujo único `ACCEPTED → QUEUED → PROCESSING → SENT → DELIVERED → READ` de [rabbitmq-outbox.md](../messaging/rabbitmq-outbox.md) no tenía forma de representar el resultado ambiguo exigido por esta misma ADR. [provider-contracts-v1.5.md](../providers/provider-contracts-v1.5.md) lo nombraba `UNKNOWN/RECONCILIATION_REQUIRED`. Ese flujo único queda **sustituido** por los tres niveles siguientes. Historial: [PENDING-DECISIONS.md, PD-02](../project/PENDING-DECISIONS.md#pd-02-máquina-de-estados-de-notificación-entrega-e-intento).
+El flujo único `ACCEPTED → QUEUED → PROCESSING → SENT → DELIVERED → READ` de [rabbitmq-outbox.md](../messaging/rabbitmq-outbox.md) no tenía forma de representar el resultado ambiguo exigido por esta misma ADR. [provider-contracts-v1.5.md](../providers/provider-contracts-v1.5.md) lo nombraba `UNKNOWN/RECONCILIATION_REQUIRED`. Ese flujo único queda **sustituido** por los tres niveles siguientes. Historial: [PENDING-DECISIONS.md, PD-02](../history/PENDING-DECISIONS.md#pd-02-máquina-de-estados-de-notificación-entrega-e-intento).
 
 ### Decisión vigente
 
@@ -92,6 +92,8 @@ Tres operaciones distintas que **no** alteran la máquina de estados de PD-02:
 | Idempotencia | Interna                                                                               | **Nueva** `Idempotency-Key`                                                                                                                                                 | Interna                                                             |
 | Origen       | Automático (backoff exponencial, jitter, límite de intentos) tras `TRANSIENT_FAILURE` | `POST /public/notifications/{id}/retry` con motivo                                                                                                                          | Automático por el Scheduler o los webhooks del proveedor            |
 | Prohibido    | Reintentar un intento `AMBIGUOUS` o un `PERMANENT_FAILURE`                            | Sobrescribir el historial de la original; reenviar si la original no está en `FAILED` o si su entrega sigue en `RECONCILIATION_REQUIRED` (`409 NOTIFICATION_NOT_RETRYABLE`) | Reenviar a ciegas                                                   |
+
+**Reenvío de notificaciones cifradas (TP-54, aprobada 2026-11-16):** una notificación `ZIP_AES256` no admite reenvío manual (`409 NOTIFICATION_NOT_RETRYABLE`), porque su contraseña ZIP se purga al llegar a un estado terminal. El cliente debe crear una notificación nueva con su propia contraseña.
 
 **Reenvío manual (TP-21, aprobada 2026-11-15):** el actor es la **aplicación consumidora** autenticada con su API Key, nunca un usuario humano. Se registran la API Key solicitante (`resend_requested_by_api_key_id`, de la misma aplicación), el motivo (`resend_reason`), la fecha (`created_at`) y la referencia original. En `audit_logs` queda como `actor_type = APPLICATION`, con `actor_id` = aplicación y `api_key_id`. La notificación original queda intacta.
 

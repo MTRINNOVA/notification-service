@@ -2,18 +2,19 @@
 
 **Documento derivado.** Resume las operaciones de [openapi.yaml](openapi.yaml), que es la **fuente normativa única** del contrato HTTP v1 ([api-design.md](api-design.md#fuente-de-verdad)). No define contrato propio: ante cualquier discrepancia prevalece `openapi.yaml`, y este inventario se regenera a partir de él.
 
-Operaciones: **104**.
+Operaciones: **106**.
 
 ## Authentication API — `/api/v1/management/auth`
 
 | Método | Ruta | `operationId` | Autenticación / permiso |
 |---|---|---|---|
 | PUT | `/active-organization` | `selectActiveOrganization` | JWT + membresía/rol |
-| POST | `/login` | `login` | Credenciales de usuario (sin sesión previa); devuelve `csrfToken` (TP-38) |
+| POST | `/login` | `login` | Credenciales de usuario (sin sesión previa); devuelve `csrfToken` (TP-38) y el vencimiento de la sesión (TP-58); revoca la sesión anterior del navegador si existe |
 | POST | `/logout` | `logout` | `RefreshCookie` (cookie `refresh`) **y** `CsrfHeader` (`X-CSRF-Token`) (TP-37) |
 | GET | `/me` | `getCurrentUser` | JWT + membresía/rol |
 | POST | `/password` | `changePassword` | JWT del propio usuario; admitido con `mustChangePassword` (TP-46) |
-| POST | `/refresh` | `refreshSession` | `RefreshCookie` (cookie `refresh`) **y** `CsrfHeader` (`X-CSRF-Token`) (TP-37); devuelve un `csrfToken` nuevo (TP-38) |
+| POST | `/session` | `resumeSession` | Solo `RefreshCookie` + `Origin` obligatorio, sin CSRF; recupera la sesión tras recargar (TP-41) |
+| POST | `/refresh` | `refreshSession` | `RefreshCookie` (cookie `refresh`) **y** `CsrfHeader` (`X-CSRF-Token`); devuelve un `csrfToken` nuevo |
 
 ## Public API — `/api/v1/public`
 
@@ -115,6 +116,7 @@ La columna de permiso indica el scope de API Key que la operación declara en `x
 | POST | `/users` | `createUser` | JWT + membresía/rol |
 | GET | `/users/{resourceId}` | `getUser` | JWT + membresía/rol |
 | PUT | `/users/{resourceId}` | `updateUser` | JWT + membresía/rol |
+| POST | `/users/{userId}/temporary-password` | `resetUserTemporaryPassword` | JWT + `super_admin` o `members.manage` con ámbito completo del usuario (TP-55) |
 | PATCH | `/users/{userId}/status` | `updateUserStatus` | JWT + membresía/rol |
 
 ## Platform API — `/api/v1/platform`
@@ -122,7 +124,7 @@ La columna de permiso indica el scope de API Key que la operación declara en `x
 | Método | Ruta | `operationId` | Autenticación / permiso |
 |---|---|---|---|
 | GET | `/organizations/{organizationId}/limits` | `getOrganizationLimits` | JWT + `super_admin` activo (TP-45) |
-| PUT | `/organizations/{organizationId}/limits` | `setOrganizationLimits` | JWT + `super_admin` activo; motivo auditado (TP-45) |
+| PUT | `/organizations/{organizationId}/limits` | `setOrganizationLimits` | JWT + `super_admin` activo; motivo auditado |
 | GET | `/super-admins` | `listSuperAdminAssignments` | JWT + `super_admin` activo |
 | POST | `/super-admins` | `grantSuperAdmin` | JWT + `super_admin` activo |
 | POST | `/super-admins/{assignmentId}/revoke` | `revokeSuperAdmin` | JWT + `super_admin` activo |

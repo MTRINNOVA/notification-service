@@ -26,6 +26,7 @@ La autorización se evalúa por usuario + membresía activa + organización sele
 | Configurar límites de cuota de una organización (TP-45) | Sí, auditado (Platform API) | No | No | No | No |
 | Crear usuarios con contraseña temporal (TP-46) | Sí | Con `members.manage` | No | No | No |
 | Cambiar la propia contraseña | Sí | Sí | Sí | Sí | No |
+| Reasignar contraseña temporal de otro usuario (TP-55) | Sí, auditado | Con `members.manage`, solo si el usuario pertenece únicamente a sus organizaciones y no es `super_admin` | No | No | No |
 | Conceder/revocar `super_admin`          | Sí (nunca el último activo) |                   No |                     No |               No |                              No |
 | Ajustar permisos de roles del sistema   |                Sí, auditado |                   No |                     No |               No |                              No |
 

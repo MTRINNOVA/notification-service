@@ -2,7 +2,7 @@
 
 Backend de la plataforma de notificaciones multi-organización y multi-aplicación (WhatsApp, Email, SMS). Sigue Clean Architecture + Hexagonal Architecture y las decisiones documentadas en [docs/](docs/). El frontend (`notification-admin`) vive en otro repositorio.
 
-> **Estado actual:** fundación técnica saneada. **No hay funcionalidad de negocio**: sin entidades, persistencia, autenticación, mensajería, proveedores ni endpoints funcionales. La Fase 2 (persistencia y modelo de datos) **no está autorizada**. Ver [repository-sanitization-report.md](docs/operations/repository-sanitization-report.md).
+> **Estado actual:** fundación técnica saneada. **No hay funcionalidad de negocio**: sin entidades, persistencia, autenticación, mensajería, proveedores ni endpoints funcionales. Ver [repository-sanitization-report.md](docs/history/repository-sanitization-report.md). Cada fase de desarrollo se inicia solo con autorización expresa ([AGENTS.md](AGENTS.md) §18).
 
 Instrucciones para agentes de desarrollo: [AGENTS.md](AGENTS.md) (y [CLAUDE.md](CLAUDE.md) para Claude Code).
 
@@ -98,9 +98,9 @@ Aún no hay Docker Compose. Traefik es externo y nunca forma parte de este repos
 ## Decisiones y pendientes
 
 - Decisiones aprobadas: [docs/adr/](docs/adr/), [DECISIONS-v1.5.md](docs/project/DECISIONS-v1.5.md).
-- Historial de las decisiones PD-01 a PD-08 (todas aprobadas): [PENDING-DECISIONS.md](docs/project/PENDING-DECISIONS.md).
+- Historial de las decisiones PD-01 a PD-08 (todas aprobadas): [PENDING-DECISIONS.md](docs/history/PENDING-DECISIONS.md).
 - Catálogo de códigos de error de la API: [error-codes.md](docs/api/error-codes.md).
 - Contrato HTTP v1: [openapi.yaml](docs/api/openapi.yaml) es la **fuente normativa única** ([api-design.md](docs/api/api-design.md#fuente-de-verdad)).
 - Bootstrap de `super_admin`: [super-admin-bootstrap.md](docs/operations/super-admin-bootstrap.md).
 - **Registro único de pendientes:** [technical-pending-register.md](docs/operations/technical-pending-register.md).
-- Índice completo (normativos e históricos): [notification-architecture-index.md](docs/project/notification-architecture-index.md). Los informes de `docs/operations/*report*.md` son históricos.
+- Índice completo (normativos e históricos): [notification-architecture-index.md](docs/project/notification-architecture-index.md). Los informes de auditoría y el historial de decisiones están en [docs/history/](docs/history/README.md) y son solo trazabilidad.

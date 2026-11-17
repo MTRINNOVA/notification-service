@@ -64,7 +64,7 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
       description:
         "202 confirma persistencia y aceptación; no implica entrega. Con `scheduledAt`
-        la cuota diaria no se reserva al aceptar, sino al ejecutarse (TP-44), así que
+        la cuota diaria no se reserva al aceptar, sino al ejecutarse, así que
         un envío programado no devuelve los 429 de cuota diaria.
 
 
@@ -161,7 +161,7 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateBulkNotificationsRequest"
       description:
-        "Aceptación parcial (TP-43): cada ítem se valida por separado. Los válidos
+        "Aceptación parcial: cada ítem se valida por separado. Los válidos
         se aceptan en una transacción por ítem (notificación, reserva de cuota y outbox)
         y los inválidos se informan en `items` con el código que tendrían en un envío
         individual (p. ej. SENDER_NOT_CONNECTED, ATTACHMENT_NOT_AVAILABLE, WHATSAPP_DAILY_QUOTA_EXCEEDED,
@@ -292,7 +292,7 @@ paths:
       description:
         "Cancela una notificación cuya entrega aún no salió hacia el proveedor
         (entrega `PENDING`, `QUEUED` o `RETRY_PENDING`). Comparte caso de uso y semántica
-        con `cancelManagementNotification` (TP-36, TP-39).
+        con `cancelManagementNotification`.
 
 
         Códigos de error específicos: RESOURCE_STATE_CONFLICT (409): la notificación
@@ -306,7 +306,7 @@ paths:
       operationId: cancelManagementNotification
       summary: Cancelar notificación pendiente desde el panel
       description:
-        "Cancelación solicitada por un usuario del panel (TP-36). Reutiliza el mismo
+        "Cancelación solicitada por un usuario del panel. Reutiliza el mismo
         caso de uso de cancelación que `cancelNotification` (Public API); solo cambian
         la autenticación y el actor auditado.
 
@@ -330,7 +330,7 @@ paths:
 
 
         Códigos de error específicos: RESOURCE_STATE_CONFLICT (409): la notificación
-        ya está cancelada (TP-39; misma regla que la Public API, sin idempotencia
+        ya está cancelada (misma regla que la Public API, sin idempotencia
         con 200); NOTIFICATION_ALREADY_DISPATCHED (409): la entrega ya salió hacia el
         proveedor. Permiso insuficiente: PERMISSION_DENIED (403)."
       security:
@@ -399,15 +399,16 @@ paths:
             type: string
             format: uuid
       description:
-        "Reenvío manual (TP-19, TP-21): lo solicita la **aplicación consumidora**
+        "Reenvío manual: lo solicita la **aplicación consumidora**
         autenticada con su API Key, que debe tener el scope `notifications.retry`;
         el actor es la aplicación, nunca un usuario humano. Crea una **nueva** notificación
         y una nueva entrega vinculadas a la original mediante `resendOfNotificationId`,
         con nueva Idempotency-Key y motivo obligatorio, y consume cuota una vez al aceptarse.
         No modifica el historial de la original. Solo se admite si la original está
-        `FAILED` y su entrega no requiere conciliación. La auditoría registra la aplicación
-        y la API Key de origen. Los reintentos técnicos son automáticos y no se solicitan
-        por API.
+        `FAILED` y su entrega no requiere conciliación. Una notificación `ZIP_AES256` no
+        se puede reenviar, porque su contraseña ZIP se borra al llegar a un estado terminal: responde 409 NOTIFICATION_NOT_RETRYABLE y el cliente debe crear una
+        notificación nueva. La auditoría registra la aplicación y la API Key de origen.
+        Los reintentos técnicos son automáticos y no se solicitan por API.
 
 
         Códigos de error específicos: IDEMPOTENCY_KEY_CONFLICT, NOTIFICATION_NOT_RETRYABLE
@@ -475,7 +476,7 @@ paths:
       operationId: getAttachment
       summary: Consultar metadatos de adjunto
       description:
-        "Scope requerido: `attachments.read` (TP-28), independiente de `attachments.upload`.
+        "Scope requerido: `attachments.read`, independiente de `attachments.upload`.
         La lectura está limitada a la organización y la aplicación propietarias del
         adjunto, derivadas de la API Key; un adjunto de otra aplicación u organización
         responde 404 sin revelar su existencia. Si la respuesta incluye `downloadUrl`,
@@ -910,6 +911,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableContent"
       requestBody:
         required: true
         content:
@@ -917,13 +920,14 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateUserRequest"
       description:
-        "Crea un usuario global con contraseña temporal (TP-46), que debe cambiar en
+        "Crea un usuario global con contraseña temporal, que debe cambiar en
         su primer acceso. Lo pueden hacer `super_admin` y los usuarios con el permiso
         `members.manage`. Para darle acceso a una organización se crea después la
         membresía con `createMembership`.
 
 
-        Códigos de error específicos: RESOURCE_ALREADY_EXISTS (409)."
+        Códigos de error específicos: RESOURCE_ALREADY_EXISTS (409); PASSWORD_POLICY_VIOLATION
+        (422)."
   /management/users/{resourceId}:
     get:
       tags:
@@ -1609,9 +1613,9 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateScheduledNotificationRequest"
       description:
-        "Programa una notificación de la aplicación indicada en `applicationId` (TP-53).
+        "Programa una notificación de la aplicación indicada en `applicationId`.
         Al crearla se valida igual que un envío inmediato y se persisten la notificación
-        y la programación (`PENDING`), pero **no** se reserva cuota (TP-44). Al vencer,
+        y la programación (`PENDING`), pero **no** se reserva cuota. Al vencer,
         el Scheduler reserva la cuota en el día local de ejecución de la organización
         y vuelve a comprobar el remitente. Si falla, la programación queda `FAILED` con
         `failureCode` y la notificación en `FAILED`; no se reprograma automáticamente.
@@ -1741,7 +1745,7 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateMembershipRequest"
       description:
-        "Vincula a un usuario **existente** (por email) con la organización (TP-46).
+        "Vincula a un usuario **existente** (por email) con la organización.
         No crea usuarios: si el email no corresponde a ningún usuario → 422 MEMBERSHIP_USER_NOT_FOUND.
 
 
@@ -1793,14 +1797,14 @@ paths:
               $ref: "#/components/schemas/SetMembershipRolesRequest"
       description:
         "Sustituye los roles de la membresía. Si la sustitución retira `organization_admin`
-        de la última membresía activa que lo tiene, se rechaza (TP-35). La validación
+        de la última membresía activa que lo tiene, se rechaza. La validación
         es transaccional y bloquea las membresías administradoras activas de la organización
         para que dos solicitudes concurrentes no puedan dejarla sin administrador. El
         intento y su resultado se auditan.
 
 
         Códigos de error específicos: ROLE_NOT_ASSIGNABLE (422): `super_admin`
-        o rol de otra organización; LAST_ORGANIZATION_ADMIN_REQUIRED (422): la operación dejaría a la organización sin ninguna membresía activa con el rol `organization_admin` (TP-35)."
+        o rol de otra organización; LAST_ORGANIZATION_ADMIN_REQUIRED (422): la operación dejaría a la organización sin ninguna membresía activa con el rol `organization_admin`."
   /management/organizations/{organizationId}/memberships/{membershipId}/status:
     patch:
       tags:
@@ -1813,12 +1817,12 @@ paths:
         `organization_admin` de esa organización y a `super_admin` (con auditoría).
         Una membresía no activa deja de habilitar la organización en el contexto
         del usuario. No se puede suspender ni desactivar la última membresía activa
-        con `organization_admin` (TP-35): validación transaccional con bloqueo de
+        con `organization_admin`: validación transaccional con bloqueo de
         las membresías administradoras activas de la organización; el intento y su
         resultado se auditan.
 
 
-        Códigos de error específicos: LAST_ORGANIZATION_ADMIN_REQUIRED (422): la operación dejaría a la organización sin ninguna membresía activa con el rol `organization_admin` (TP-35)."
+        Códigos de error específicos: LAST_ORGANIZATION_ADMIN_REQUIRED (422): la operación dejaría a la organización sin ninguna membresía activa con el rol `organization_admin`."
       security:
         - AdminBearer: []
       responses:
@@ -1864,7 +1868,7 @@ paths:
       operationId: setApplicationPermissions
       summary: Actualizar permisos/límites de aplicación
       description:
-        "Fija el techo de scopes de la aplicación (TP-48): el conjunto máximo de scopes
+        "Fija el techo de scopes de la aplicación: el conjunto máximo de scopes
         (`ApiKeyScope`) que pueden tener sus API Keys. Los scopes retirados dejan de autorizar
         de inmediato en las claves existentes."
       security:
@@ -1987,8 +1991,7 @@ paths:
       operationId: createApiKey
       summary: Crear API Key
       description:
-        "Crea una API Key. Sus scopes deben estar dentro de los permisos de la aplicación
-        (TP-48). El secreto solo se devuelve en esta respuesta.
+        "Crea una API Key. Sus scopes deben estar dentro de los permisos de la aplicación. El secreto solo se devuelve en esta respuesta.
 
 
         Códigos de error específicos: API_KEY_SCOPE_NOT_PERMITTED (422)."
@@ -2063,7 +2066,7 @@ paths:
             type: string
             format: uuid
       description:
-        "Rotación sin solape (TP-52): en una sola transacción crea una API Key nueva
+        "Rotación sin solape: en una sola transacción crea una API Key nueva
         (nuevo `id` y secreto, mismo nombre y scopes, `rotatedFromApiKeyId` = la anterior)
         y revoca la anterior. La respuesta contiene el nuevo `id` y el secreto, que solo
         se muestra aquí. La auditoría conserva el id de cada clave.
@@ -2696,7 +2699,7 @@ paths:
       summary: Asignar remitentes a aplicación
       description:
         "Sustituye en una sola transacción el conjunto de remitentes autorizados
-        de la aplicación y su remitente predeterminado (TP-33). La transacción bloquea
+        de la aplicación y su remitente predeterminado. La transacción bloquea
         las asignaciones de la aplicación para que, con solicitudes concurrentes, quede
         como máximo un predeterminado válido por aplicación y canal. Todos los remitentes
         deben pertenecer a la misma organización que la aplicación; uno de otra organización
@@ -3317,12 +3320,16 @@ paths:
       operationId: login
       summary: Iniciar sesión de usuario
       description:
-        "Valida `Origin` (obligatorio; debe ser el origen del panel, TP-40) y las
+        "Valida `Origin` (obligatorio; debe ser el origen del panel) y las
         credenciales, crea la sesión del panel (familia de refresh tokens) y emite el
-        refresh token y el token CSRF de esa sesión (TP-38). El refresh token
+        refresh token y el token CSRF de esa sesión. El refresh token
         se entrega solo en la cookie `refresh` (`Set-Cookie`, ver `RefreshCookie`); nunca
         en el cuerpo. El token CSRF se devuelve en `csrfToken` y el panel lo conserva
-        solo en memoria. No requiere `X-CSRF-Token`, porque aún no existe sesión."
+        solo en memoria. No requiere `X-CSRF-Token`, porque aún no existe sesión.
+        Devuelve `sessionExpiresAt` y `sessionExpiresIn` (sesión de 60 minutos).
+        Si la petición trae una cookie `refresh` válida, esa sesión anterior se revoca al
+        crear la nueva: así se reautentica el usuario desde el aviso de cierre del panel,
+        sin dejar dos sesiones vivas."
       security: []
       responses:
         "200":
@@ -3366,16 +3373,16 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
       description:
-        "Requiere a la vez la cookie `refresh` y la cabecera `X-CSRF-Token`
-        (TP-37). El refresh token opaco viaja en una cookie `HttpOnly`, `Secure` en
+        "Requiere a la vez la cookie `refresh` y la cabecera `X-CSRF-Token`. El refresh token opaco viaja en una cookie `HttpOnly`, `Secure` en
         producción, `SameSite=Strict` y limitada a la ruta `/api/v1/management/auth`.
-        El backend exige y valida `Origin` (TP-40), obtiene la sesión a partir de la cookie y compara
+        El backend exige y valida `Origin`, obtiene la sesión a partir de la cookie y compara
         el `X-CSRF-Token` recibido con el token CSRF asociado a esa sesión, almacenado
-        como hash (token sincronizado con la sesión, TP-38). Si todo es válido, rota
+        como hash (token sincronizado con la sesión). Si todo es válido, rota
         el refresh token (un solo uso), reemite la cookie y genera un **nuevo** token
         CSRF, que se devuelve en `csrfToken`; el token CSRF anterior deja de ser válido.
         Si se presenta un refresh token ya usado, se revoca toda su familia, se elimina
-        la cookie, se audita la reutilización y se responde 401. Cookie ausente, expirada,
+        la cookie, se audita la reutilización y se responde 401. La sesión vence a los
+        60 minutos del login aunque se renueve; después, 401 y nuevo login. Cookie ausente, expirada,
         revocada o reutilizada: 401 AUTHENTICATION_REQUIRED. Token CSRF ausente o que
         no coincide, u `Origin` ausente o no permitido: 403 PERMISSION_DENIED. El `detail` es
         genérico y no indica qué comprobación falló."
@@ -3399,12 +3406,46 @@ paths:
           $ref: "#/components/responses/Forbidden"
       description:
         "Requiere a la vez la cookie `refresh` y la cabecera `X-CSRF-Token`
-        vigente (TP-37, TP-38). El backend valida `Origin`, la sesión y el token CSRF
+        vigente. El backend valida `Origin`, la sesión y el token CSRF
         asociado a ella; después revoca la sesión (familia de refresh tokens), invalida
         el refresh token y el token CSRF, y elimina la cookie (`Max-Age=0`, con la misma
         ruta y atributos con que se emitió). Cookie ausente o inválida: 401 AUTHENTICATION_REQUIRED.
         Token CSRF ausente o que no coincide, u `Origin` ausente o no permitido: 403
         PERMISSION_DENIED. El `detail` es genérico y no indica qué comprobación falló."
+  /management/auth/session:
+    post:
+      tags:
+        - Authentication
+      operationId: resumeSession
+      summary: Recuperar la sesión al cargar el panel
+      description:
+        "Arranque del panel tras recargar la página o abrir otra pestaña, cuando
+        ya no hay `csrfToken` en memoria. Requiere solo la cookie `refresh` y un `Origin`
+        obligatorio igual al origen del panel; **no** requiere `X-CSRF-Token`. Su protección
+        anti-CSRF se apoya en `SameSite=Strict`, la validación de `Origin` y un CORS restrictivo
+        que impide a otro origen leer la respuesta. Hace lo mismo que `refreshSession`:
+        rota el refresh token (con detección de reutilización), reemite la cookie y devuelve
+        un `accessToken` y un `csrfToken` nuevos, sin alargar el vencimiento de la sesión
+        (60 minutos desde el login). El token CSRF anterior deja de valer.
+        El panel debe serializar `resumeSession` y `refreshSession` entre pestañas y compartir
+        los tokens nuevos en memoria (contrato del panel). Cookie ausente, expirada, revocada
+        o reutilizada: 401 AUTHENTICATION_REQUIRED. `Origin` ausente o no permitido: 403
+        PERMISSION_DENIED. El `detail` es genérico."
+      security:
+        - RefreshCookie: []
+      responses:
+        "200":
+          description: Sesión recuperada; cookie reemitida.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /management/auth/password:
     post:
       tags:
@@ -3412,7 +3453,7 @@ paths:
       operationId: changePassword
       summary: Cambiar la contraseña propia
       description:
-        "Sustituye la contraseña del usuario autenticado (TP-46). Es la única forma
+        "Sustituye la contraseña del usuario autenticado. Es la única forma
         de salir de `mustChangePassword`. Si es correcta, guarda el nuevo hash Argon2id,
         pone `mustChangePassword = false` y revoca las demás sesiones del usuario. La
         sesión actual sigue activa. Contraseña actual incorrecta o nueva contraseña
@@ -3639,7 +3680,7 @@ paths:
         "Administración del catálogo de permisos de los roles del sistema.
         Solo `super_admin` activo; afecta a todas las organizaciones y queda auditada.
         No crea roles. Solo admite códigos del catálogo `RolePermissionCode` que la matriz
-        RBAC marca como asignables a ese rol (TP-51).
+        RBAC marca como asignables a ese rol.
 
 
         Códigos de error específicos: PERMISSION_NOT_ASSIGNABLE (422)."
@@ -3711,6 +3752,51 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /management/users/{userId}/temporary-password:
+    post:
+      tags:
+        - Users and Roles
+      operationId: resetUserTemporaryPassword
+      summary: Reasignar una contraseña temporal
+      description:
+        "Recuperación de acceso de un usuario que olvidó su contraseña; no hay
+        autoservicio por email en v1. Fija una contraseña temporal nueva, activa `mustChangePassword`,
+        revoca todas las sesiones del usuario y queda auditada con motivo. La pueden usar
+        `super_admin`, y quien tenga `members.manage` solo si el usuario pertenece
+        únicamente a organizaciones donde el actor tiene ese permiso y no es `super_admin`,
+        porque la cuenta es global. En los demás casos responde 403 PERMISSION_DENIED.
+        Un usuario fuera del ámbito del actor responde 404.
+
+
+        Códigos de error específicos: PASSWORD_POLICY_VIOLATION (422)."
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetTemporaryPasswordRequest"
+      responses:
+        "204":
+          description: Contraseña temporal asignada; sesiones revocadas.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableContent"
   /management/users/{userId}/status:
     patch:
       tags:
@@ -3720,12 +3806,12 @@ paths:
       description:
         "Cambia el estado global del usuario, que afecta a todas sus membresías.
         Suspender o desactivar a un usuario que es el último `organization_admin`
-        activo de alguna organización se rechaza (TP-35), con la misma validación
+        activo de alguna organización se rechaza, con la misma validación
         transaccional y bloqueo que en las membresías. El intento y su resultado se
         auditan.
 
 
-        Códigos de error específicos: LAST_ORGANIZATION_ADMIN_REQUIRED (422): la operación dejaría a la organización sin ninguna membresía activa con el rol `organization_admin` (TP-35)."
+        Códigos de error específicos: LAST_ORGANIZATION_ADMIN_REQUIRED (422): la operación dejaría a la organización sin ninguna membresía activa con el rol `organization_admin`."
       security:
         - AdminBearer: []
       parameters:
@@ -3894,7 +3980,7 @@ paths:
         - Platform
       operationId: getOrganizationLimits
       summary: Consultar límites de una organización
-      description: Solo `super_admin` activo (TP-45).
+      description: Solo `super_admin` activo.
       security:
         - AdminBearer: []
       parameters:
@@ -3925,7 +4011,7 @@ paths:
       operationId: setOrganizationLimits
       summary: Fijar límites de una organización
       description:
-        "Solo `super_admin` activo, con motivo obligatorio y auditado (TP-45). Sustituye
+        "Solo `super_admin` activo, con motivo obligatorio y auditado. Sustituye
         los límites de los canales indicados. Si un límite de aplicación queda por encima
         del nuevo límite de organización, no se rechaza: el límite efectivo de la aplicación
         es el menor de los dos."
@@ -3976,25 +4062,26 @@ components:
       bearerFormat: JWT
       description:
         Access token del panel. Mientras el usuario tenga `mustChangePassword`,
-        solo se admiten `getCurrentUser`, `changePassword`, `refreshSession` y `logout`;
-        el resto responde 403 PASSWORD_CHANGE_REQUIRED (TP-46).
+        solo se admiten `getCurrentUser`, `changePassword`, `refreshSession`, `resumeSession`
+        y `logout`; el resto responde 403 PASSWORD_CHANGE_REQUIRED.
     RefreshCookie:
       type: apiKey
       in: cookie
       name: refresh
       description:
-        Refresh token opaco del panel (TP-37). Cookie `HttpOnly`, `Secure` en
+        Refresh token opaco del panel. Cookie `HttpOnly`, `Secure` en
         producción, `SameSite=Strict`, `Path=/api/v1/management/auth` y caducidad
-        igual a la del refresh token (7 días). Se rota en cada uso y se elimina al
-        cerrar sesión o al detectar reutilización. Solo la aceptan `refreshSession`
-        y `logout`; no es un esquema global.
+        igual a la vigencia restante de la sesión, como máximo 60 minutos desde el
+        login; las rotaciones no la alargan. Se rota en cada uso y se elimina al
+        cerrar sesión o al detectar reutilización. Solo la aceptan `refreshSession`,
+        `logout` (junto con `CsrfHeader`) y `resumeSession` (sola, con `Origin` obligatorio); no es un esquema global.
     CsrfHeader:
       type: apiKey
       in: header
       name: X-CSRF-Token
       description:
-        Token anti-CSRF **sincronizado con la sesión** (TP-38), obligatorio junto
-        con `RefreshCookie` en las operaciones autenticadas por cookie (TP-37). Su valor
+        Token anti-CSRF **sincronizado con la sesión**, obligatorio junto
+        con `RefreshCookie` en las operaciones autenticadas por cookie. Su valor
         es el `csrfToken` devuelto por el último login o refresh correcto. El backend
         lo compara con el hash asociado a la sesión que identifica la cookie. Nunca
         viaja en la URL ni en una cookie legible (no se usa doble envío).
@@ -4080,7 +4167,7 @@ components:
           format: date-time
           description:
             Ejecución diferida. Se valida al aceptar, pero la cuota diaria se reserva
-            al ejecutarse, en el día local de ejecución de la organización (TP-44).
+            al ejecutarse, en el día local de ejecución de la organización.
         metadata:
           type: object
           additionalProperties:
@@ -4099,7 +4186,7 @@ components:
     EncryptionOptions:
       type: object
       description:
-        "Cifrado del contenido (TP-47). Lo aplica el servicio antes de entregar al
+        "Cifrado del contenido. Lo aplica el servicio antes de entregar al
         proveedor; no lo hace el proveedor. Combinaciones admitidas: `PGP` solo en
         EMAIL (cuerpo y adjuntos, con `pgpPublicKey`); `ZIP_AES256` en EMAIL y WHATSAPP
         y solo con adjuntos (empaqueta los adjuntos en un ZIP AES-256 con `zipPassword`);
@@ -4142,7 +4229,7 @@ components:
     AcceptedBatch:
       type: object
       description:
-        "Resultado de un lote (TP-43, aceptación parcial). Cada ítem se valida y
+        "Resultado de un lote (aceptación parcial). Cada ítem se valida y
         acepta o rechaza por separado: los válidos se aceptan (y consumen cuota) y los
         inválidos se informan en `items` con su código de error. El lote completo es
         idempotente por `Idempotency-Key`."
@@ -4230,7 +4317,7 @@ components:
           $ref: "#/components/schemas/NotificationPublicStatus"
         encryption:
           type: string
-          description: Modo de cifrado solicitado (TP-47). Nunca incluye secretos.
+          description: Modo de cifrado solicitado. Nunca incluye secretos.
           enum:
             - NONE
             - TLS_ONLY
@@ -4327,7 +4414,7 @@ components:
       description:
         Metadatos del adjunto; el binario vive en MinIO (bucket privado)
         y se descarga con URL firmada de corta duración. Lectura con scope
-        `attachments.read` (TP-28).
+        `attachments.read`.
     TemplateReference:
       type: object
       required:
@@ -4479,17 +4566,20 @@ components:
           type: string
           format: password
           writeOnly: true
+          minLength: 12
+          maxLength: 128
           description:
-            Contraseña temporal fijada por el administrador (TP-46). Se guarda
+            Contraseña temporal fijada por el administrador. Se guarda
             solo como hash Argon2id; nunca se devuelve ni se registra. El usuario
-            debe cambiarla en su primer acceso (`mustChangePassword`).
+            debe cambiarla en su primer acceso (`mustChangePassword`). Cumple la
+            política de contraseñas; si no, 422 PASSWORD_POLICY_VIOLATION.
     UpdateUserRequest:
       type: object
       properties:
         displayName:
           type: string
       description:
-        El estado del usuario se cambia solo con `updateUserStatus` (TP-50).
+        El estado del usuario se cambia solo con `updateUserStatus`.
     User:
       type: object
       properties:
@@ -4510,7 +4600,7 @@ components:
         mustChangePassword:
           type: boolean
           readOnly: true
-          description: El usuario aún no ha sustituido su contraseña temporal (TP-46).
+          description: El usuario aún no ha sustituido su contraseña temporal.
     Role:
       type: object
       properties:
@@ -4555,7 +4645,7 @@ components:
           type: boolean
           default: false
           description:
-            Marcarla como predeterminada de su canal (TP-49). Desmarca la anterior
+            Marcarla como predeterminada de su canal. Desmarca la anterior
             en la misma transacción.
         configuration:
           type: object
@@ -4572,7 +4662,7 @@ components:
         isDefault:
           type: boolean
           description:
-            Marcarla como predeterminada de su canal (TP-49). Desmarca la anterior
+            Marcarla como predeterminada de su canal. Desmarca la anterior
             en la misma transacción.
         configuration:
           type: object
@@ -4601,7 +4691,7 @@ components:
         isDefault:
           type: boolean
           description:
-            Cuenta predeterminada de la organización para su canal (TP-49). Como
+            Cuenta predeterminada de la organización para su canal. Como
             máximo una por organización y canal; se usa en Email y SMS cuando no hay
             otra selección. WhatsApp se resuelve por remitente.
         credentialsConfigured:
@@ -4609,7 +4699,7 @@ components:
     ProviderDefinitionPage:
       type: object
       description:
-        Página de resultados (TP-34). `total` es el número de resultados que
+        Página de resultados. `total` es el número de resultados que
         coinciden con los filtros aplicados, antes de paginar.
       required:
         - items
@@ -4744,7 +4834,7 @@ components:
     ProviderInstancePage:
       type: object
       description:
-        Página de resultados (TP-34). `total` es el número de resultados que
+        Página de resultados. `total` es el número de resultados que
         coinciden con los filtros aplicados, antes de paginar.
       required:
         - items
@@ -4801,12 +4891,12 @@ components:
             - DISABLED
       description:
         Remitente WhatsApp de la organización. No tiene atributo de predeterminado
-        propio (TP-33). El remitente predeterminado se define **por aplicación**
+        propio. El remitente predeterminado se define **por aplicación**
         con `defaultSenderId` en `assignApplicationSenders`.
     SenderPage:
       type: object
       description:
-        Página de resultados (TP-34). `total` es el número de resultados que
+        Página de resultados. `total` es el número de resultados que
         coinciden con los filtros aplicados, antes de paginar.
       required:
         - items
@@ -4849,7 +4939,7 @@ components:
             - "null"
           format: uuid
           description:
-            Remitente predeterminado de **esta aplicación** (TP-33). Debe estar incluido
+            Remitente predeterminado de **esta aplicación**. Debe estar incluido
             en `senderIds` y pertenecer a la misma organización que la aplicación. Como
             máximo hay un predeterminado válido por aplicación y canal. `null` deja la
             aplicación sin predeterminado, y los envíos sin `senderId` se rechazan con
@@ -4867,7 +4957,7 @@ components:
           type: string
           format: uuid
           description:
-            Aplicación propietaria (TP-53). Debe pertenecer a la organización
+            Aplicación propietaria. Debe pertenecer a la organización
             seleccionada; si no, 404. No es fuente de autoridad.
         code:
           type: string
@@ -4921,11 +5011,11 @@ components:
             - ARCHIVED
           description:
             Una versión se publica al crearse y es inmutable; no hay borradores
-            en v1 (TP-50). `ARCHIVED` impide usarla en nuevos envíos.
+            en v1. `ARCHIVED` impide usarla en nuevos envíos.
     TemplateVersionPage:
       type: object
       description:
-        Página de resultados (TP-34). `total` es el número de resultados que
+        Página de resultados. `total` es el número de resultados que
         coinciden con los filtros aplicados, antes de paginar.
       required:
         - items
@@ -4992,7 +5082,7 @@ components:
           type: string
           format: uuid
           description:
-            Aplicación propietaria (TP-53). Debe pertenecer a la organización
+            Aplicación propietaria. Debe pertenecer a la organización
             seleccionada; si no, 404.
         name:
           type: string
@@ -5066,7 +5156,7 @@ components:
     CampaignRecipientPage:
       type: object
       description:
-        Página de resultados (TP-34). `total` es el número de resultados que
+        Página de resultados. `total` es el número de resultados que
         coinciden con los filtros aplicados, antes de paginar.
       required:
         - items
@@ -5104,7 +5194,7 @@ components:
           type: string
           format: uuid
           description:
-            Aplicación en cuyo nombre se programa (TP-53). Debe pertenecer a la
+            Aplicación en cuyo nombre se programa. Debe pertenecer a la
             organización seleccionada; si no, 404.
         notification:
           $ref: "#/components/schemas/CreateNotificationRequest"
@@ -5142,7 +5232,7 @@ components:
             - "null"
           description:
             Código del catálogo de errores cuando la ejecución falla (p. ej. WHATSAPP_DAILY_QUOTA_EXCEEDED
-            o SENDER_NOT_CONNECTED, TP-44).
+            o SENDER_NOT_CONNECTED).
         timezone:
           type: string
           readOnly: true
@@ -5175,7 +5265,7 @@ components:
     MembershipPage:
       type: object
       description:
-        Página de resultados (TP-34). `total` es el número de resultados que
+        Página de resultados. `total` es el número de resultados que
         coinciden con los filtros aplicados, antes de paginar.
       required:
         - items
@@ -5254,7 +5344,7 @@ components:
           items:
             $ref: "#/components/schemas/ApiKeyScope"
           description:
-            Techo de scopes de la aplicación (TP-48). Ninguna API Key de la aplicación
+            Techo de scopes de la aplicación. Ninguna API Key de la aplicación
             puede tener un scope fuera de este conjunto. Al reducirlo, los scopes retirados
             dejan de autorizar de inmediato en las claves existentes (scopes efectivos
             = scopes de la clave ∩ permisos de la aplicación).
@@ -5286,7 +5376,7 @@ components:
     ApiKeyScope:
       type: string
       description:
-        Catálogo cerrado de scopes de API Key de la Public API (TP-28). Cada
+        Catálogo cerrado de scopes de API Key de la Public API. Cada
         operación pública declara el suyo en `x-required-scopes`; la lectura de
         adjuntos (`attachments.read`) es independiente de la subida (`attachments.upload`).
       enum:
@@ -5314,7 +5404,7 @@ components:
     ApiKeyPage:
       type: object
       description:
-        Página de resultados (TP-34). `total` es el número de resultados que
+        Página de resultados. `total` es el número de resultados que
         coinciden con los filtros aplicados, antes de paginar.
       required:
         - items
@@ -5346,7 +5436,7 @@ components:
                   - string
                   - "null"
                 format: uuid
-                description: Clave a la que sustituyó esta al rotar (TP-52).
+                description: Clave a la que sustituyó esta al rotar.
               expiresAt:
                 type: string
                 format: date-time
@@ -5387,7 +5477,7 @@ components:
     ProviderHealthPage:
       type: object
       description:
-        Página de resultados (TP-34). `total` es el número de resultados que
+        Página de resultados. `total` es el número de resultados que
         coinciden con los filtros aplicados, antes de paginar.
       required:
         - items
@@ -5417,7 +5507,7 @@ components:
     AuditEventPage:
       type: object
       description:
-        Página de resultados (TP-34). `total` es el número de resultados que
+        Página de resultados. `total` es el número de resultados que
         coinciden con los filtros aplicados, antes de paginar.
       required:
         - items
@@ -5576,7 +5666,7 @@ components:
     OrganizationLimits:
       type: object
       description:
-        "Límites de la organización por canal (TP-45). `dailyLimit` nulo = sin
+        "Límites de la organización por canal. `dailyLimit` nulo = sin
         límite diario en ese canal. El límite efectivo de una aplicación es el menor
         entre el suyo y el de la organización. WhatsApp se crea con 500 por día."
       required:
@@ -5626,6 +5716,25 @@ components:
           type: string
           minLength: 1
           description: Motivo obligatorio, auditado.
+    ResetTemporaryPasswordRequest:
+      type: object
+      required:
+        - temporaryPassword
+        - reason
+      properties:
+        temporaryPassword:
+          type: string
+          format: password
+          writeOnly: true
+          minLength: 12
+          maxLength: 128
+          description:
+            Nueva contraseña temporal. Cumple la política de contraseñas;
+            nunca se devuelve ni se registra.
+        reason:
+          type: string
+          minLength: 1
+          description: Motivo obligatorio, auditado.
     ChangePasswordRequest:
       type: object
       required:
@@ -5640,7 +5749,10 @@ components:
           type: string
           format: password
           writeOnly: true
-          description: Debe cumplir la política de contraseñas (pendiente TP-55).
+          minLength: 12
+          maxLength: 128
+          description:
+            "Política de contraseñas: entre 12 y 128 caracteres Unicode, espacios incluidos; sin reglas de composición ni caducidad periódica; se rechazan las de la lista de contraseñas comunes o filtradas y las iguales al email. Además, debe ser distinta de la actual."
     LoginRequest:
       type: object
       required:
@@ -5660,13 +5772,27 @@ components:
         del cuerpo; viaja solo en la cookie `refresh`.
       required:
         - csrfToken
+        - sessionExpiresAt
+        - sessionExpiresIn
       properties:
+        sessionExpiresAt:
+          type: string
+          format: date-time
+          description:
+            Vencimiento absoluto de la sesión en UTC (login + 60 minutos).
+            Igual en todas las respuestas de la misma sesión; rotar no lo cambia.
+        sessionExpiresIn:
+          type: integer
+          minimum: 0
+          description:
+            Segundos que faltan para el vencimiento de la sesión al emitir la respuesta. El panel calcula la cuenta atrás con este valor, no con su propio
+            reloj, y avisa 5 minutos antes.
         csrfToken:
           type: string
           description:
-            Token CSRF de la sesión (TP-38), de 32 bytes aleatorios (256 bits) de un
+            Token CSRF de la sesión, de 32 bytes aleatorios (256 bits) de un
             generador criptográficamente seguro, codificados como texto opaco; el backend
-            guarda solo su SHA-256 y lo compara en tiempo constante (TP-40). Cada login y cada refresh correcto devuelven
+            guarda solo su SHA-256 y lo compara en tiempo constante. Cada login y cada refresh correcto devuelven
             uno nuevo e invalidan el anterior. El panel lo conserva solo en memoria
             (nunca en `localStorage`, `sessionStorage`, cookies ni URLs) y lo envía
             en `X-CSRF-Token`.
@@ -5696,9 +5822,9 @@ components:
         mustChangePassword:
           type: boolean
           description:
-            "`true` mientras el usuario conserve la contraseña temporal (TP-46).
-            Solo puede usar `getCurrentUser`, `changePassword`, `refreshSession`
-            y `logout`; el resto responde 403 PASSWORD_CHANGE_REQUIRED."
+            "`true` mientras el usuario conserve la contraseña temporal.
+            Solo puede usar `getCurrentUser`, `changePassword`, `refreshSession`,
+            `resumeSession` y `logout`; el resto responde 403 PASSWORD_CHANGE_REQUIRED."
         memberships:
           type: array
           items:
@@ -5740,7 +5866,7 @@ components:
     RolePermissionCode:
       type: string
       description:
-        Catálogo cerrado de permisos de rol humanos (TP-51). Distinto del catálogo
+        Catálogo cerrado de permisos de rol humanos. Distinto del catálogo
         de scopes de API Key (`ApiKeyScope`).
       enum:
         - members.manage
@@ -5767,7 +5893,7 @@ components:
           uniqueItems: true
           items:
             $ref: "#/components/schemas/RolePermissionCode"
-          description: Códigos del catálogo `permissions` de la plataforma (TP-51).
+          description: Códigos del catálogo `permissions` de la plataforma.
     PlatformRoleAssignment:
       type: object
       required:
@@ -5972,7 +6098,8 @@ components:
         TEMPLATE_VARIABLES_MISSING, ATTACHMENT_NOT_AVAILABLE, APPLICATION_LIMIT_EXCEEDS_ORGANIZATION_LIMIT,
         ROLE_NOT_ASSIGNABLE, LAST_SUPER_ADMIN_REVOCATION_FORBIDDEN, LAST_ORGANIZATION_ADMIN_REQUIRED,
         PROVIDER_DIAGNOSTICS_NOT_SUPPORTED, MEMBERSHIP_USER_NOT_FOUND, ENCRYPTION_OPTIONS_INVALID,
-        API_KEY_SCOPE_NOT_PERMITTED, PASSWORD_CHANGE_REJECTED, PERMISSION_NOT_ASSIGNABLE."
+        API_KEY_SCOPE_NOT_PERMITTED, PASSWORD_CHANGE_REJECTED, PERMISSION_NOT_ASSIGNABLE,
+        PASSWORD_POLICY_VIOLATION."
       content:
         application/problem+json:
           schema:

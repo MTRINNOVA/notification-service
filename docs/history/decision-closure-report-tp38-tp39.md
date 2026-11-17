@@ -1,6 +1,6 @@
 # Informe de cierre documental TP-38 y TP-39 — 2026-11-15
 
-> **Documento histórico** (evidencia de la tarea del 2026-11-15). No es fuente operativa: el estado vigente está en [technical-pending-register.md](technical-pending-register.md) y las decisiones en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
+> **Documento histórico** (evidencia de la tarea del 2026-11-15). No es fuente operativa: el estado vigente está en [technical-pending-register.md](../operations/technical-pending-register.md) y las decisiones en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
 
 **La Fase 2 no ha comenzado. No se ha implementado código funcional.**
 

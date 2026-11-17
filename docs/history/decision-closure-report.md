@@ -1,6 +1,6 @@
 # Informe de cierre de decisiones PD-01 a PD-08 — 2026-11-15
 
-> **Documento histórico** (evidencia de la auditoría del 2026-11-15). No es fuente operativa: el estado vigente de los pendientes está en [technical-pending-register.md](technical-pending-register.md) y las decisiones en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
+> **Documento histórico** (evidencia de la auditoría del 2026-11-15). No es fuente operativa: el estado vigente de los pendientes está en [technical-pending-register.md](../operations/technical-pending-register.md) y las decisiones en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
 
 ## 1. Resumen ejecutivo
 
@@ -161,7 +161,7 @@ Búsqueda en `docs/`, `README.md`, `AGENTS.md`, `CLAUDE.md` y `.env.example`, ex
 
 ## 12. Pendientes técnicos conservados
 
-Se conservan en [technical-pending-register.md](technical-pending-register.md):
+Se conservan en [technical-pending-register.md](../operations/technical-pending-register.md):
 
 - TP-01 a TP-12 y TP-14, con su estado original. TP-02 lleva ahora la recomendación de Testcontainers.
 - TP-09 se actualizó: el catálogo ya está documentado, pero el middleware aún no emite `type`.

@@ -1,6 +1,6 @@
 # Informe de cierre de decisiones técnicas TP-02, TP-09 y TP-15 a TP-20 — 2026-11-15
 
-> **Documento histórico** (evidencia de la auditoría del 2026-11-15). No es fuente operativa: el estado vigente de los pendientes está en [technical-pending-register.md](technical-pending-register.md) y las decisiones en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
+> **Documento histórico** (evidencia de la auditoría del 2026-11-15). No es fuente operativa: el estado vigente de los pendientes está en [technical-pending-register.md](../operations/technical-pending-register.md) y las decisiones en [DECISIONS-v1.5.md](../project/DECISIONS-v1.5.md).
 
 ## 1. Resumen ejecutivo
 
@@ -173,7 +173,7 @@ Resultado: de 93 a **99 operaciones** (−2 + 8) y **77 rutas**.
 
 ## 17. Pendientes restantes
 
-- **Implementación:** TP-02, TP-09, TP-15, TP-17, TP-18 y TP-19 (ver el [registro](technical-pending-register.md)).
+- **Implementación:** TP-02, TP-09, TP-15, TP-17, TP-18 y TP-19 (ver el [registro](../operations/technical-pending-register.md)).
 - **Requieren aprobación:**
   - **TP-21:** TP-19 habla de "persona autorizada", pero `retryNotification` usa API Key y la matriz RBAC permite el reintento a la API Key "según scope". El contrato conserva `ApiKeyAuth` hasta que se decida.
   - **TP-22:** `api-design.md` lista `PATCH .../memberships/{membershipId}/status` y `PATCH /senders/{id}/default`, que no están en el inventario ni en OpenAPI. Además hay 8 esquemas OpenAPI sin uso.

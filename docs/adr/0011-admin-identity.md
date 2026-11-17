@@ -1,6 +1,6 @@
 # ADR-0011: Identidad administrativa mediante JWT propio
 
-- Estado: Aceptado (roles de v1 actualizados el 2026-11-15: PD-01, TP-15, TP-20; ampliado con TP-35, TP-37, TP-38, TP-40 y TP-46)
+- Estado: Aceptado (roles de v1 actualizados el 2026-11-15: PD-01, TP-15, TP-20; ampliado con TP-35, TP-37, TP-38, TP-40, TP-41, TP-42, TP-46, TP-55, TP-57 y TP-58)
 - Decisión: El panel administrativo autentica usuarios mediante un mecanismo JWT gestionado por notification-service. No se adopta OIDC como requisito de la primera versión.
 
 ## Contexto
@@ -18,7 +18,12 @@ El panel es un cliente independiente. Las aplicaciones consumidoras no son usuar
 ## Parámetros iniciales recomendados
 
 - Access token: 15 minutos.
-- Refresh token: 7 días, rotación en cada uso y detección de reutilización.
+- Refresh token: rotación en cada uso y detección de reutilización. **Sesión de duración absoluta de 60 minutos desde el login (TP-57, aprobada 2026-11-17)**: todos los refresh tokens de la familia comparten el mismo `expires_at` (login + 60 min), así que renovar no alarga la sesión. Al vencer se pide login de nuevo. Sustituye a la propuesta inicial de 7 días.
+- **Aviso de cierre (TP-58, aprobada 2026-11-17):**
+  - login, refresh y `resumeSession` devuelven `sessionExpiresAt` y `sessionExpiresIn`;
+  - el panel avisa **5 minutos** antes del vencimiento con una cuenta atrás;
+  - desde el mismo aviso, el usuario puede reautenticarse con su contraseña sin salir de la página. Eso es un login normal, que abre una sesión nueva de 60 minutos y revoca la anterior, cuya cookie trae la petición;
+  - la sesión nunca se alarga sin contraseña. Así se cumple el criterio 2.2.1 de WCAG 2.2: aviso previo y forma sencilla de continuar.
 - Contraseñas: Argon2id.
 - Autorización: RBAC y comprobación obligatoria de `organization_id` y `application_id`.
 - Cookies del refresh token: `HttpOnly`, `Secure`, `SameSite=Strict` y protección CSRF obligatoria (detalle en «Sesión del panel: cookie de refresh y CSRF»).
@@ -69,13 +74,13 @@ Declarada en [openapi.yaml](../api/openapi.yaml) con los esquemas `RefreshCookie
 | `Secure` | Obligatorio en producción y en cualquier entorno expuesto. Solo puede omitirse en desarrollo local sobre `http://localhost` |
 | `SameSite` | `Strict`. Exige que el panel y la API compartan sitio registrable. Si la infraestructura definitiva (TP-27) no lo permite, el cambio de política requiere aprobación previa y mantener CSRF |
 | Ámbito | `Path=/api/v1/management/auth`, de modo que el navegador solo la envía a refresh y logout; sin `Domain` salvo necesidad justificada |
-| Expiración | `Max-Age` igual a la vigencia restante del refresh token (7 días); se reemite en cada rotación |
+| Expiración | `Max-Age` igual a la vigencia **restante** de la sesión (como máximo 60 minutos desde el login, TP-57); al reemitirse en cada rotación conserva el mismo vencimiento absoluto |
 | Eliminación | En logout y al detectar reutilización: `Max-Age=0` con la misma ruta y atributos |
 | CSRF | `X-CSRF-Token` obligatorio en refresh y logout, con el token sincronizado con la sesión de TP-38: se obtiene la sesión a partir de la cookie y se compara el token con el asociado a ella. Ausente o que no coincide → `403 PERMISSION_DENIED` |
 | Rotación | Cada refresh consume el token (un solo uso), emite uno nuevo de la misma familia y reemite la cookie |
 | Reutilización | Presentar un token ya usado revoca toda la familia, elimina la cookie, genera auditoría y responde `401 AUTHENTICATION_REQUIRED` |
 
-El nombre `X-CSRF-Token` no existía antes en la documentación (solo se exigía "protección CSRF"), así que no hay discrepancia con un nombre anterior. El código todavía no implementa la autenticación del panel. El mecanismo del token se define en la sección siguiente (TP-38).
+El nombre `X-CSRF-Token` no existía antes en la documentación (solo se exigía "protección CSRF"), así que no hay discrepancia con un nombre anterior. El código todavía no implementa la autenticación del panel. El mecanismo del token se define en la sección siguiente.
 
 ## Token CSRF sincronizado con la sesión (TP-38, aprobada 2026-11-15)
 
@@ -141,19 +146,32 @@ Las operaciones autenticadas con `Authorization: Bearer` no usan la cookie, y po
 | Refresh token | Mismo criterio: 32 bytes aleatorios guardados como SHA-256 (`refresh_tokens.token_hash`) |
 | `Origin` | Obligatorio en login, refresh y logout |
 
+**Recuperación de sesión al cargar el panel (TP-41, aprobada 2026-11-16):** tras recargar la página o abrir otra pestaña, el panel ya no tiene `csrfToken`. Llama entonces a `POST /management/auth/session` (`resumeSession`), que exige la cookie `refresh` y un `Origin` válido y obligatorio, pero **no** `X-CSRF-Token`. Su protección anti-CSRF se apoya en `SameSite=Strict`, la validación de `Origin` y un CORS restrictivo que impide a otro origen leer la respuesta. Rota la sesión igual que `refreshSession` y devuelve tokens nuevos. Riesgo aceptado: es la única operación de cookie sin token sincronizado. Si se relaja `SameSite=Strict` o la validación de `Origin`, debe revisarse.
+
+**Distinción `401`/`403` (TP-42, aprobada 2026-11-16):** se mantiene. `401` indica una sesión no válida y `403`, un fallo de CSRF u `Origin`. El `detail` es genérico. Riesgo aceptado: el código HTTP distingue ambos casos, pero una página atacante no puede leer respuestas de otro origen.
+
 El contrato que consume el panel está en [admin-panel-auth-contract.md](../api/admin-panel-auth-contract.md).
 
 ## Alta de usuarios con contraseña temporal (TP-46, aprobada 2026-11-15)
 
 - `createUser` (`super_admin` o permiso `members.manage`) crea el usuario global con una **contraseña temporal** fijada por el administrador. Se guarda como hash Argon2id, nunca se devuelve ni se registra, y el usuario queda con `must_change_password = true`. El bootstrap de `super_admin` usa el mismo mecanismo.
-- Mientras `must_change_password` sea `true`, el usuario puede iniciar sesión, pero solo puede usar `getCurrentUser`, `changePassword`, `refreshSession` y `logout`. El resto responde `403 PASSWORD_CHANGE_REQUIRED`. `CurrentUser.mustChangePassword` se lo indica al panel.
+- Mientras `must_change_password` sea `true`, el usuario puede iniciar sesión, pero solo puede usar `getCurrentUser`, `changePassword`, `refreshSession`, `resumeSession` y `logout`. El resto responde `403 PASSWORD_CHANGE_REQUIRED`. `CurrentUser.mustChangePassword` se lo indica al panel.
 - `changePassword` (`POST /management/auth/password`) exige la contraseña actual. Guarda el nuevo hash, pone `must_change_password = false` y revoca las demás sesiones del usuario. Si la contraseña actual es incorrecta o la nueva no cumple la política → `422 PASSWORD_CHANGE_REJECTED`, sin indicar cuál de las dos.
 - `createMembership` solo vincula usuarios **existentes** por email. Si no existe → `422 MEMBERSHIP_USER_NOT_FOUND`; la membresía nunca crea usuarios.
-- **Pendiente** (no bloquea la Fase 2): política de contraseñas (longitud y complejidad) y restablecimiento de contraseña olvidada (TP-55).
+- **Política de contraseñas (TP-55, NIST SP 800-63B, aprobada 2026-11-16):**
+  - entre 12 y 128 caracteres Unicode, espacios incluidos;
+  - sin reglas de composición ni caducidad periódica;
+  - se rechazan las contraseñas de una lista de comunes o filtradas y las iguales al email;
+  - la nueva debe ser distinta de la actual.
+
+  Se aplica a `createUser`, `resetUserTemporaryPassword` (`422 PASSWORD_POLICY_VIOLATION`) y `changePassword` (`422 PASSWORD_CHANGE_REJECTED`). La lista es local; consultar un servicio externo de contraseñas filtradas requiere aprobación previa.
+- **Contraseña olvidada:** no hay autoservicio por email en v1. `POST /management/users/{userId}/temporary-password` (`resetUserTemporaryPassword`) asigna una contraseña temporal nueva, activa `must_change_password`, revoca todas las sesiones del usuario y se audita con motivo.
+  - **Quién puede usarla:** `super_admin`, o quien tenga `members.manage`, solo si el usuario pertenece únicamente a organizaciones donde el actor tiene ese permiso y no es `super_admin`. Como la cuenta es global, de otro modo se podría escalar acceso a otra organización.
+  - En los demás casos responde `403`.
 
 ### Historial
 
-La versión original de esta ADR sugería: `super_admin`, `organization_admin`, `application_admin`, `operator`, `viewer`, como "plantillas iniciales". La matriz RBAC usaba `org_admin` para el mismo concepto. Con PD-01 ([PENDING-DECISIONS.md](../project/PENDING-DECISIONS.md#pd-01-nomenclatura-y-alcance-de-roles)):
+La versión original de esta ADR sugería: `super_admin`, `organization_admin`, `application_admin`, `operator`, `viewer`, como "plantillas iniciales". La matriz RBAC usaba `org_admin` para el mismo concepto. Con PD-01 ([PENDING-DECISIONS.md](../history/PENDING-DECISIONS.md#pd-01-nomenclatura-y-alcance-de-roles)):
 
 - `org_admin` se sustituye por el nombre canónico `organization_admin`; no se conserva como alias.
 - `application_admin` **no** forma parte de v1. Requeriría roles con ámbito de aplicación, que el modelo de v1 no tiene.

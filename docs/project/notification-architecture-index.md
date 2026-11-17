@@ -6,7 +6,7 @@
 
 ### Decisiones
 
-- [DECISIONS-v1.5.md](DECISIONS-v1.5.md): decisiones aprobadas de producto y técnicas (incluye PD-01..PD-08, TP-02, TP-05..TP-07, TP-15..TP-22, TP-28, TP-33..TP-40, TP-43..TP-53 y PostgreSQL 17).
+- [DECISIONS-v1.5.md](DECISIONS-v1.5.md): decisiones aprobadas de producto y técnicas (incluye PD-01..PD-08, TP-02, TP-05..TP-07, TP-15..TP-22, TP-28, TP-33..TP-56 y PostgreSQL 17).
 - ADR vigentes:
   - [ADR-0001](../adr/0001-architecture.md): Clean + Hexagonal
   - [ADR-0002](../adr/0002-repositories.md): repositorios separados
@@ -66,16 +66,20 @@
 
 ## Históricos (solo trazabilidad)
 
-- [PENDING-DECISIONS.md](PENDING-DECISIONS.md): historial de las propuestas PD-01..PD-08, todas aprobadas.
+Todos están en [docs/history/](../history/README.md), separados de los normativos desde el 2026-11-17.
+
+
+- [PENDING-DECISIONS.md](../history/PENDING-DECISIONS.md): historial de las propuestas PD-01..PD-08, todas aprobadas.
 - [CHANGELOG-v1.5.md](CHANGELOG-v1.5.md)
 - Informes de auditoría del 2026-11-15:
-  - [repository-sanitization-report.md](../operations/repository-sanitization-report.md)
-  - [decision-closure-report.md](../operations/decision-closure-report.md)
-  - [decision-closure-report-tp15-tp20.md](../operations/decision-closure-report-tp15-tp20.md)
-  - [documentation-consolidation-report.md](../operations/documentation-consolidation-report.md)
-  - [decision-closure-report-tp28-tp37.md](../operations/decision-closure-report-tp28-tp37.md) (TP-05..TP-07, TP-28, TP-33..TP-37)
-  - [decision-closure-report-tp38-tp39.md](../operations/decision-closure-report-tp38-tp39.md) (TP-38, TP-39)
-  - [decision-closure-report-phase2-readiness.md](../operations/decision-closure-report-phase2-readiness.md) (preparación de la Fase 2: TP-40, TP-43..TP-53)
+  - [repository-sanitization-report.md](../history/repository-sanitization-report.md)
+  - [decision-closure-report.md](../history/decision-closure-report.md)
+  - [decision-closure-report-tp15-tp20.md](../history/decision-closure-report-tp15-tp20.md)
+  - [documentation-consolidation-report.md](../history/documentation-consolidation-report.md)
+  - [decision-closure-report-tp28-tp37.md](../history/decision-closure-report-tp28-tp37.md) (TP-05..TP-07, TP-28, TP-33..TP-37)
+  - [decision-closure-report-tp38-tp39.md](../history/decision-closure-report-tp38-tp39.md) (TP-38, TP-39)
+  - [decision-closure-report-phase2-readiness.md](../history/decision-closure-report-phase2-readiness.md) (preparación de la Fase 2: TP-40, TP-43..TP-53)
+  - [decision-closure-report-tp41-tp56.md](../history/decision-closure-report-tp41-tp56.md) (TP-41, TP-42, TP-54..TP-56)
 
 ## Frontend (`notification-admin`, repositorio independiente)
 
@@ -84,5 +88,6 @@ Rutas dentro de ese repositorio; no se pueden enlazar desde aquí:
 - `docs/architecture/`
 - `docs/api/management-api-consumption.md`
 - `docs/security/frontend-security.md`
+- `docs/security/session-management.md` (sesión de 60 minutos, aviso de cierre, recarga y contraseñas)
 - `docs/deployment/docker.md`
 - `docs/acceptance/criteria.md`

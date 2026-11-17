@@ -62,6 +62,11 @@ Operaciones concretas: [openapi.yaml](openapi.yaml) y su resumen en [endpoint-in
 - **Metadatos:** `metadata` es un mapa libre del cliente que se persiste tal cual. No se usa para autorización ni debe contener secretos.
 - **Recursos de Management con aplicación (TP-53):** `createTemplate`, `createCampaign` y `createScheduledNotification` exigen `applicationId`, que debe pertenecer a la organización seleccionada (si no, `404`). No es fuente de autoridad: solo identifica el recurso dentro del tenant ya autorizado.
 
+## Sesión y contraseñas del panel
+
+- `resumeSession` (`POST /management/auth/session`) recupera la sesión tras recargar el panel, con la cookie `refresh` y un `Origin` obligatorio, sin `X-CSRF-Token` (TP-41). Los códigos `401`/`403` de las operaciones de sesión se mantienen distintos (TP-42).
+- Política de contraseñas NIST SP 800-63B (12 a 128 caracteres, lista de comunes y filtradas). Recuperación por reasignación de una contraseña temporal (`resetUserTemporaryPassword`), sin autoservicio (TP-55).
+
 ## Límites y API Keys
 
 - **Límites de organización (TP-45):** `GET/PUT /platform/organizations/{organizationId}/limits`, solo `super_admin`, con motivo auditado. WhatsApp parte de 500 por día. El límite efectivo de una aplicación es el menor entre el suyo y el de su organización.
@@ -71,10 +76,10 @@ Operaciones concretas: [openapi.yaml](openapi.yaml) y su resumen en [endpoint-in
 
 ## Reintento técnico, reenvío manual y conciliación
 
-Semántica normativa en [ADR-0012](../adr/0012-delivery-semantics.md) (TP-19, TP-21):
+Semántica normativa en [ADR-0012](../adr/0012-delivery-semantics.md) (TP-19):
 
 - **Reintento técnico y conciliación:** son internos. No se exponen como operaciones ni consumen cuota.
-- **Reenvío manual:** `POST /public/notifications/{notificationId}/retry`. Lo solicita la **aplicación consumidora** con su API Key y el scope `notifications.retry`; el actor es la aplicación, nunca un usuario humano. Crea una nueva notificación vinculada (`resendOfNotificationId`), exige una `Idempotency-Key` nueva y un motivo, y consume cuota una vez. No existe operación de reenvío para usuarios del panel en v1.
+- **Reenvío manual:** `POST /public/notifications/{notificationId}/retry`. Lo solicita la **aplicación consumidora** con su API Key y el scope `notifications.retry`; el actor es la aplicación, nunca un usuario humano. Crea una nueva notificación vinculada (`resendOfNotificationId`), exige una `Idempotency-Key` nueva y un motivo, y consume cuota una vez. No existe operación de reenvío para usuarios del panel en v1. Una notificación `ZIP_AES256` no se puede reenviar, porque su secreto se purga al llegar a un estado terminal: `409 NOTIFICATION_NOT_RETRYABLE` (TP-54).
 
 ## Cancelación de notificaciones (TP-36)
 

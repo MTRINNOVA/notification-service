@@ -74,7 +74,7 @@ Credenciales se inyectan desde secretos de Docker/Portainer o secret manager. No
 ## Notas
 
 - En producción fijar imágenes por versión/digest, no `latest`.
-- Una imagen por host ([PD-07](../project/PENDING-DECISIONS.md#pd-07-estrategia-de-imágenes-docker), aprobada): `notification-api`, `notification-worker` y `notification-scheduler`, cada una con su Dockerfile y su servicio en el Compose.
+- Una imagen por host ([PD-07](../history/PENDING-DECISIONS.md#pd-07-estrategia-de-imágenes-docker), aprobada): `notification-api`, `notification-worker` y `notification-scheduler`, cada una con su Dockerfile y su servicio en el Compose.
 - No ejecutar migraciones EF automáticamente en cada réplica.
 - Healthcheck de API: `GET /health/live` (liveness, solo el proceso) y `GET /health/ready` (readiness; incluirá cada dependencia cuando tenga una comprobación real). Worker/Scheduler: `GET /health/live` y `GET /health/ready` por HTTP interno, sin puerto publicado ni ruta en Traefik (TP-05, aprobado; implementación pendiente; [health-checks.md](health-checks.md)).
 - Proteger consola de RabbitMQ y MinIO; no exponerlas públicamente.

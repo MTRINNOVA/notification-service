@@ -52,7 +52,7 @@ Implementaciones de persistencia, mensajería, caché, almacenamiento, cifrado y
 
 ## Puertos de proveedores (decisión aprobada PD-03, 2026-11-15)
 
-Se usan **puertos especializados por canal**, sin contrato universal. Esta sección sustituye al contrato común `INotificationProvider` (`ProviderCode`, `Channel`, `Capabilities`, `SendAsync`, `TestConnectionAsync`, `GetHealthAsync`) y al puerto genérico `IProviderConnectionManager` de la versión anterior de este documento. Ambos quedan **retirados** y no deben implementarse. Historial: [PENDING-DECISIONS.md, PD-03](../project/PENDING-DECISIONS.md#pd-03-puertos-de-proveedores).
+Se usan **puertos especializados por canal**, sin contrato universal. Esta sección sustituye al contrato común `INotificationProvider` (`ProviderCode`, `Channel`, `Capabilities`, `SendAsync`, `TestConnectionAsync`, `GetHealthAsync`) y al puerto genérico `IProviderConnectionManager` de la versión anterior de este documento. Ambos quedan **retirados** y no deben implementarse. Historial: [PENDING-DECISIONS.md, PD-03](../history/PENDING-DECISIONS.md#pd-03-puertos-de-proveedores).
 
 Ubicación prevista (aún no implementada): `NotificationService.Application/Abstractions/Providers/`.
 

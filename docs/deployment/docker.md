@@ -4,7 +4,7 @@
 
 - Traefik ya existe en el VPS y queda fuera del repositorio.
 - Compose de backend y Compose de Admin independientes.
-- Una imagen por host ([PD-07](../project/PENDING-DECISIONS.md#pd-07-estrategia-de-imágenes-docker), aprobada): `notification-api`, `notification-worker`, `notification-scheduler`, publicadas en GHCR (`ghcr.io/<owner>/notification-<host>`) con tags inmutables/semver y digest en producción.
+- Una imagen por host ([PD-07](../history/PENDING-DECISIONS.md#pd-07-estrategia-de-imágenes-docker), aprobada): `notification-api`, `notification-worker`, `notification-scheduler`, publicadas en GHCR (`ghcr.io/<owner>/notification-<host>`) con tags inmutables/semver y digest en producción.
 - PostgreSQL, RabbitMQ, Redis y MinIO no publican puertos al host en producción.
 - Persistencia mediante volúmenes/directorios dedicados.
 - Secretos fuera del repositorio; `.env.example` solo contiene nombres y valores ficticios.
@@ -32,7 +32,7 @@ Evolution y Postfix pueden tener Compose independiente. SMS Gateway normalmente 
 
 ## Dominios (variables; DNS reales sin fijar)
 
-Decisión aprobada ([PD-06](../project/PENDING-DECISIONS.md#pd-06-subdominios-y-dns)): Compose y labels de Traefik usan siempre estas variables, nunca nombres fijos. Los nombres DNS reales todavía no están fijados (dato de infraestructura). Traefik es el existente del VPS y no forma parte de este repositorio:
+Decisión aprobada ([PD-06](../history/PENDING-DECISIONS.md#pd-06-subdominios-y-dns)): Compose y labels de Traefik usan siempre estas variables, nunca nombres fijos. Los nombres DNS reales todavía no están fijados (dato de infraestructura). Traefik es el existente del VPS y no forma parte de este repositorio:
 
 | Variable                      | Destino                                                               |
 | ----------------------------- | --------------------------------------------------------------------- |
@@ -42,7 +42,7 @@ Decisión aprobada ([PD-06](../project/PENDING-DECISIONS.md#pd-06-subdominios-y-
 
 ## Imágenes
 
-Decisión aprobada ([PD-07](../project/PENDING-DECISIONS.md#pd-07-estrategia-de-imágenes-docker)): **una imagen independiente por host**, cada una con su Dockerfile, su runtime y su despliegue (contexto de build: raíz del repositorio):
+Decisión aprobada ([PD-07](../history/PENDING-DECISIONS.md#pd-07-estrategia-de-imágenes-docker)): **una imagen independiente por host**, cada una con su Dockerfile, su runtime y su despliegue (contexto de build: raíz del repositorio):
 
 | Imagen                   | Dockerfile                                     | Runtime                |
 | ------------------------ | ---------------------------------------------- | ---------------------- |
