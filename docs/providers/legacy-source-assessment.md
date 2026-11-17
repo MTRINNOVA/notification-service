@@ -40,3 +40,20 @@
 ## Conclusión
 
 La fuente anterior sirve como referencia de compatibilidad y comportamiento para Evolution, SMSGate y SMTP. No constituye una especificación completa de webhooks ni una base que deba migrarse literalmente. La nueva implementación deberá respetar la arquitectura aprobada (.NET 10, RabbitMQ, MinIO, PostgreSQL, multi-organización/multiaplicación) y validar los contratos externos con las versiones fijadas.
+
+## Funciones del sistema anterior frente a v1 (decisión del 2026-11-15)
+
+Revisión de `Notificaciones-master` (documentación y `database/migrations/001_audit_schema.sql`) para preparar la Fase 2:
+
+| Función del sistema anterior | Decisión para v1 |
+|---|---|
+| Cifrado PGP de cuerpo y adjuntos y ZIP AES-256 de adjuntos (`encryption_type`) | **Incluida** (TP-47): `EncryptionOptions` en OpenAPI y columnas de cifrado en `notifications` |
+| Lista de supresión (rebotes, bajas) | No incluida en v1 |
+| Metadatos de origen normalizados (`triggered_by_user_*`, `source_module`, `source_ip`) | No incluidos como columnas; el cliente puede enviarlos en `metadata` (`notifications.metadata_json`) |
+| Registro de consentimiento | No incluido; el opt-in es responsabilidad de la organización cliente |
+| `priority` de la notificación | No incluido (retirado del ERD) |
+| Perfil Outlook con SMTP OAuth2 | Sin decisión. Si se necesita, es configuración de `CUSTOM_SMTP` (`configuration_json` y credenciales), sin cambios de esquema |
+| Idempotencia solo en Redis | Sustituida por `idempotency_records` en PostgreSQL (ya aprobado) |
+| Canales Telegram, Web Push, WebSocket y webhook saliente | Fuera de v1 (ya aprobado) |
+
+El esquema SQL anterior (`tenants`, `notifications`, `notification_attempts`, `notification_status_history`) **no** se migra. El modelo vigente es el de [erd.md](../data/erd.md).

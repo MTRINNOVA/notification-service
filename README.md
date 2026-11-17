@@ -91,6 +91,8 @@ docker build -f src/NotificationService.Worker/Dockerfile -t notification-worker
 docker build -f src/NotificationService.Scheduler/Dockerfile -t notification-scheduler:dev .
 ```
 
+Worker y Scheduler expondrán `/health/live` y `/health/ready` internos (TP-05, aprobado; no implementado: [health-checks.md](docs/deployment/health-checks.md)). CI y publicación en GHCR con GitHub Actions están aprobadas pero sin workflows todavía (TP-07: [ci-cd.md](docs/deployment/ci-cd.md)).
+
 Aún no hay Docker Compose. Traefik es externo y nunca forma parte de este repositorio ([ADR-0010](docs/adr/0010-traefik.md)).
 
 ## Decisiones y pendientes

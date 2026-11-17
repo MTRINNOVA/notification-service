@@ -29,7 +29,9 @@ Cada host (`Api`, `Worker`, `Scheduler`) tiene su Dockerfile y genera una imagen
 
 Archivos de raíz: `NotificationService.sln`, `global.json` (SDK), `Directory.Build.props` (propiedades comunes), `Directory.Packages.props` (versiones NuGet centralizadas), `.env.example`, `.dockerignore`.
 
-No existe `NotificationService.Scheduler.Tests`. Las pruebas de composición del Scheduler están temporalmente en `Architecture.Tests` (TP-06 en [technical-pending-register.md](../operations/technical-pending-register.md)).
+No existe todavía `NotificationService.Scheduler.Tests`. Las pruebas de composición del Scheduler están temporalmente en `Architecture.Tests`. **Estructura objetivo (TP-06, aprobado):** `tests/NotificationService.Scheduler.Tests/` se crea con la primera lógica funcional propia del Scheduler, nunca como proyecto vacío; las pruebas previstas están en [scheduler-tests.md](../testing/scheduler-tests.md).
+
+Previsto, sin crear: `.github/workflows/` con CI y publicación en GHCR (TP-07, [ci-cd.md](../deployment/ci-cd.md)).
 
 ## Dependencias permitidas
 

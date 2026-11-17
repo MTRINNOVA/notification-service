@@ -2,24 +2,27 @@
 
 **Documento derivado.** Resume las operaciones de [openapi.yaml](openapi.yaml), que es la **fuente normativa única** del contrato HTTP v1 ([api-design.md](api-design.md#fuente-de-verdad)). No define contrato propio: ante cualquier discrepancia prevalece `openapi.yaml`, y este inventario se regenera a partir de él.
 
-Operaciones: **100**.
+Operaciones: **104**.
 
 ## Authentication API — `/api/v1/management/auth`
 
 | Método | Ruta | `operationId` | Autenticación / permiso |
 |---|---|---|---|
 | PUT | `/active-organization` | `selectActiveOrganization` | JWT + membresía/rol |
-| POST | `/login` | `login` | Credenciales de usuario (sin sesión previa) |
-| POST | `/logout` | `logout` | Cookie `HttpOnly` del refresh token + CSRF (descripción de la operación) |
+| POST | `/login` | `login` | Credenciales de usuario (sin sesión previa); devuelve `csrfToken` (TP-38) |
+| POST | `/logout` | `logout` | `RefreshCookie` (cookie `refresh`) **y** `CsrfHeader` (`X-CSRF-Token`) (TP-37) |
 | GET | `/me` | `getCurrentUser` | JWT + membresía/rol |
-| POST | `/refresh` | `refreshSession` | Cookie `HttpOnly` del refresh token + CSRF (descripción de la operación) |
+| POST | `/password` | `changePassword` | JWT del propio usuario; admitido con `mustChangePassword` (TP-46) |
+| POST | `/refresh` | `refreshSession` | `RefreshCookie` (cookie `refresh`) **y** `CsrfHeader` (`X-CSRF-Token`) (TP-37); devuelve un `csrfToken` nuevo (TP-38) |
 
 ## Public API — `/api/v1/public`
+
+La columna de permiso indica el scope de API Key que la operación declara en `x-required-scopes` (catálogo cerrado `ApiKeyScope`).
 
 | Método | Ruta | `operationId` | Autenticación / permiso |
 |---|---|---|---|
 | POST | `/attachments` | `uploadAttachment` | `attachments.upload` |
-| GET | `/attachments/{attachmentId}` | `getAttachment` | API Key — **scope no definido** (TP-28) |
+| GET | `/attachments/{attachmentId}` | `getAttachment` | `attachments.read` (TP-28; solo adjuntos de su organización y aplicación) |
 | GET | `/notifications` | `listNotifications` | `notifications.read` |
 | POST | `/notifications` | `createNotification` | `notifications.send` |
 | POST | `/notifications/bulk` | `createBulkNotifications` | `notifications.send` |
@@ -61,6 +64,7 @@ Operaciones: **100**.
 | GET | `/dashboard/deliveries` | `getDashboardDeliveries` | JWT + membresía/rol |
 | GET | `/dashboard/providers-health` | `getDashboardProvidersHealth` | JWT + membresía/rol |
 | GET | `/dashboard/summary` | `getDashboardSummary` | JWT + membresía/rol |
+| POST | `/notifications/{notificationId}/cancel` | `cancelManagementNotification` | JWT + membresía activa + permiso de rol `notifications.cancel`; `super_admin` global, auditado (TP-36) |
 | GET | `/organizations` | `listOrganizations` | JWT + membresía/rol |
 | POST | `/organizations` | `createOrganization` | JWT + membresía/rol |
 | GET | `/organizations/{organizationId}/memberships` | `listMemberships` | JWT + membresía/rol |
@@ -117,6 +121,8 @@ Operaciones: **100**.
 
 | Método | Ruta | `operationId` | Autenticación / permiso |
 |---|---|---|---|
+| GET | `/organizations/{organizationId}/limits` | `getOrganizationLimits` | JWT + `super_admin` activo (TP-45) |
+| PUT | `/organizations/{organizationId}/limits` | `setOrganizationLimits` | JWT + `super_admin` activo; motivo auditado (TP-45) |
 | GET | `/super-admins` | `listSuperAdminAssignments` | JWT + `super_admin` activo |
 | POST | `/super-admins` | `grantSuperAdmin` | JWT + `super_admin` activo |
 | POST | `/super-admins/{assignmentId}/revoke` | `revokeSuperAdmin` | JWT + `super_admin` activo |
@@ -130,6 +136,12 @@ Operaciones: **100**.
 | POST | `/whatsapp/evolution/{providerAccountId}` | `receiveEvolutionWebhook` | Firma/secreto del proveedor |
 
 ## Notas
+
+- `createBulkNotifications` acepta parcialmente (TP-43). `createTemplate`, `createCampaign` y `createScheduledNotification` exigen `applicationId` (TP-53). Mientras un usuario tenga `mustChangePassword`, solo `getCurrentUser`, `changePassword`, `refreshSession` y `logout` le responden (TP-46).
+- Los permisos de rol de la Management API (`RolePermissionCode`) están en [rbac-matrix.md](../security/rbac-matrix.md#catálogo-de-permisos-de-rol-tp-51).
+
+- La cancelación tiene dos puntos de entrada que reutilizan el **mismo caso de uso** (TP-36): `cancelNotification` (Public API, API Key con scope `notifications.cancel`, actor `APPLICATION`) y `cancelManagementNotification` (Management API, JWT, actor `USER`). Ambas responden igual: ya cancelada → `409 RESOURCE_STATE_CONFLICT`; ya despachada → `409 NOTIFICATION_ALREADY_DISPATCHED` (TP-39).
+- Las colecciones paginadas devuelven `items`, `page`, `pageSize` y `total` (TP-34); `total` cuenta los resultados que cumplen los filtros antes de paginar.
 
 - Los roles de organización se asignan solo por membresía; no existe asignación directa de roles a un usuario. Las operaciones `POST /management/roles`, `PUT /management/roles/{roleId}` y `PUT /management/users/{userId}/roles` están **retiradas** (TP-16/TP-20).
 - Los métodos, cabeceras y esquemas de webhook deben alinearse con las versiones exactas de cada proveedor instaladas. No normalizar el payload externo antes de verificar su autenticidad; guardar un evento bruto controlado y luego transformarlo en un evento interno.

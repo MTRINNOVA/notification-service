@@ -45,6 +45,7 @@ Implementaciones de persistencia, mensajería, caché, almacenamiento, cifrado y
 - `IMessagePublisher`
 - `IObjectStorage`
 - `ISecretProtector`
+- `IContentEncryptionService` (TP-47): cifrado PGP de cuerpo y adjuntos y empaquetado ZIP AES-256 de adjuntos. Lo define Application y lo implementa Infrastructure. Lo usa el Worker al construir el envío, después de descifrar la contraseña ZIP con `ISecretProtector`. Implementarlo requiere autorizar sus paquetes NuGet
 - Puertos de proveedores por canal (ver la sección siguiente)
 - `IIdempotencyStore`
 - `IClock`

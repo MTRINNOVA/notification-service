@@ -9,6 +9,14 @@
 - Los límites de Evolution/Baileys, el VPS y las políticas de WhatsApp pueden ser más restrictivos. Validar con pruebas controladas y seguimiento operativo.
 - El volumen previo de 100,000 notificaciones/mes queda como hipótesis histórica de planificación global, no como requisito confirmado para la nueva estimación por cliente. Recalcular dimensionamiento agregado cuando se conozca el número de organizaciones y la mezcla por canal.
 
+## Modelo de v1 (TP-44, TP-45; aprobado 2026-11-15)
+
+- **Organización:** `organization_limits` por canal (`daily_limit`, `rate_per_minute`). WhatsApp parte de 500 por día y los demás canales, sin límite diario. Solo `super_admin` los cambia (Platform API, auditado).
+- **Aplicación:** `application_limits`. El límite efectivo es el menor entre el de la aplicación y el de la organización.
+- **Programadas:** consumen cuota al **ejecutarse**, en el día local de ejecución. Si la cuota está agotada, la programación falla (`FAILED`, `WHATSAPP_DAILY_QUOTA_EXCEEDED`) y no se reprograma automáticamente.
+- **Lotes:** cada ítem aceptado consume una unidad; los rechazados no consumen.
+- Los demás límites de la lista siguiente (mensuales, por remitente, por instancia, por campaña, de programados pendientes) **no** se modelan en v1. Añadirlos requiere una decisión y una migración propias.
+
 ## Cuotas y protección contra abuso
 
 Configurar por organización, aplicación, remitente y canal:

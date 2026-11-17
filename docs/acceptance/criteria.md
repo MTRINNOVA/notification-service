@@ -17,7 +17,8 @@
 - Refresh token opaco almacenado como hash, rotativo y en cookie `HttpOnly`, `Secure` y `SameSite` apropiado.
 - Reutilización de refresh token revoca la familia de sesión y genera evento de auditoría.
 - Operaciones autenticadas por cookie implementan protección CSRF.
-- API Keys se muestran una sola vez; se almacenan como hash, pueden rotarse/revocarse y tienen scopes/expiración.
+- API Keys se muestran una sola vez; se almacenan como hash, pueden rotarse/revocarse y tienen scopes/expiración. Sus scopes no superan los permisos de la aplicación (TP-48). La rotación crea una clave nueva y revoca la anterior sin solape (TP-52).
+- Un usuario creado con contraseña temporal solo puede cambiarla, consultar su perfil, refrescar y cerrar sesión hasta sustituirla (`403 PASSWORD_CHANGE_REQUIRED`, TP-46).
 - Ningún secreto de proveedor aparece en responses, frontend, logs o mensajes RabbitMQ.
 
 ## 3. Evolution API / WhatsApp
@@ -51,7 +52,9 @@
 - Cuota inicial WhatsApp: 500 mensajes aceptados por día y organización, agregada entre aplicaciones y números.
 - El día se calcula en `organizations.timezone` (no existe zona horaria por aplicación en v1); el contador se actualiza atómicamente.
 - Límites menores por aplicación no pueden exceder el límite efectivo de organización.
-- Validaciones fallidas no consumen cuota; aceptación sí; reintentos técnicos no vuelven a consumirla.
+- Validaciones fallidas no consumen cuota; aceptación sí; reintentos técnicos no vuelven a consumirla. Las notificaciones programadas consumen al ejecutarse, en el día local de ejecución (TP-44). En un lote, cada ítem aceptado consume y los rechazados no (TP-43).
+- El límite diario de la organización vive en `organization_limits` (WhatsApp 500 por defecto) y solo lo cambia `super_admin` (TP-45).
+- Un lote con ítems inválidos responde `202` con el resultado de cada ítem; los válidos se aceptan (TP-43).
 - El exceso de cuota devuelve `429` con `WHATSAPP_DAILY_QUOTA_EXCEEDED` (o `APPLICATION_DAILY_LIMIT_EXCEEDED`), `Retry-After` y `retryAt` cuando sean calculables.
 - Un límite de aplicación mayor que el de la organización se rechaza con `422 APPLICATION_LIMIT_EXCEEDS_ORGANIZATION_LIMIT`.
 - Todos los errores siguen RFC 9457 con `code` del catálogo [error-codes.md](../api/error-codes.md): `400` formato, `409` conflicto de estado/idempotencia, `422` regla de negocio.
@@ -72,11 +75,12 @@
 - Validar tamaño, extensión, MIME real y política de escaneo.
 - Las URLs firmadas expiran y no permiten listado público.
 - Las versiones publicadas de plantillas son inmutables.
+- El cifrado PGP (EMAIL) y ZIP AES-256 (EMAIL/WHATSAPP con adjuntos) se aplica antes del envío. La contraseña ZIP nunca aparece en respuestas, logs ni mensajes de RabbitMQ (TP-47).
 - El renderizado valida variables requeridas y escapa contenido según canal.
 
 ## 8. Campañas y programación
 
-- Campaña valida audiencia, consentimiento, plantilla, remitente y cuota antes de iniciar.
+- Campaña valida audiencia, plantilla, remitente y cuota antes de iniciar. En v1 la plataforma **no** registra consentimientos: el opt-in es responsabilidad de la organización cliente (decisión del 2026-11-15; [risk-register.md](../providers/risk-register.md)).
 - Pausa/cancelación detiene nuevos despachos; no se promete cancelar mensajes ya aceptados por proveedor.
 - Programación interpreta la hora local en la zona horaria de la **organización**, la convierte a UTC al crear y conserva la zona horaria y el valor local para auditoría.
 - El scheduler es idempotente ante reinicios y múltiples réplicas.

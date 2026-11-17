@@ -8,7 +8,7 @@
 - PostgreSQL, RabbitMQ, Redis y MinIO no publican puertos al host en producción.
 - Persistencia mediante volúmenes/directorios dedicados.
 - Secretos fuera del repositorio; `.env.example` solo contiene nombres y valores ficticios.
-- Healthchecks, límites de recursos, usuario no-root y logs con rotación.
+- Healthchecks, límites de recursos, usuario no-root y logs con rotación. Los tres hosts exponen `/health/live` y `/health/ready`; en Worker y Scheduler son endpoints internos (TP-05, [health-checks.md](health-checks.md)).
 - Migraciones EF Core ejecutadas como tarea controlada de release, no simultáneamente por cada réplica API.
 
 ## Servicios del Compose backend
@@ -61,8 +61,10 @@ Todos usan multi-stage con build en Release, SDK fijado a `global.json`, restore
 
 ## Release
 
+CI y publicación en GHCR con GitHub Actions: [ci-cd.md](ci-cd.md) (TP-07, aprobado; workflows pendientes). El despliegue en el VPS sigue siendo manual.
+
 1. Build/test.
-2. Publicar imágenes versionadas.
+2. Publicar imágenes versionadas (tags inmutables; registrar el digest).
 3. Backup y verificación.
 4. Ejecutar migración como tarea única.
 5. Actualizar API/Worker/Scheduler.

@@ -21,6 +21,10 @@ tags:
   - name: Scheduling
   - name: Dashboard and Audit
   - name: Webhooks
+  - name: Management Notifications
+    description:
+      Operaciones del panel sobre notificaciones (JWT + membresía). Reutilizan
+      los casos de uso de la Public API.
   - name: Platform
     description:
       Operaciones globales de plataforma. Solo `super_admin` activo; siempre
@@ -35,6 +39,8 @@ paths:
       summary: Aceptar una notificación para procesamiento asíncrono
       security:
         - ApiKeyAuth: []
+      x-required-scopes:
+        - notifications.send
       responses:
         "202":
           description: Aceptar una notificación para procesamiento asíncrono
@@ -56,14 +62,17 @@ paths:
           $ref: "#/components/responses/UnprocessableContent"
         "429":
           $ref: "#/components/responses/TooManyRequests"
-      description: "202 confirma persistencia y aceptación; no implica entrega.
+      description:
+        "202 confirma persistencia y aceptación; no implica entrega. Con `scheduledAt`
+        la cuota diaria no se reserva al aceptar, sino al ejecutarse (TP-44), así que
+        un envío programado no devuelve los 429 de cuota diaria.
 
 
         Códigos de error específicos: IDEMPOTENCY_KEY_CONFLICT (409); SENDER_NOT_CONNECTED,
         DEFAULT_SENDER_NOT_CONFIGURED, SENDER_NOT_ASSIGNED_TO_APPLICATION, TEMPLATE_VARIABLES_MISSING,
-        ATTACHMENT_NOT_AVAILABLE (422); WHATSAPP_DAILY_QUOTA_EXCEEDED, APPLICATION_DAILY_LIMIT_EXCEEDED,
-        RATE_LIMIT_EXCEEDED (429). Un adjunto de otra organización o aplicación responde
-        404."
+        ATTACHMENT_NOT_AVAILABLE, ENCRYPTION_OPTIONS_INVALID (422); WHATSAPP_DAILY_QUOTA_EXCEEDED,
+        APPLICATION_DAILY_LIMIT_EXCEEDED, RATE_LIMIT_EXCEEDED (429). Un adjunto de otra
+        organización o aplicación responde 404."
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - name: X-Correlation-Id
@@ -83,6 +92,8 @@ paths:
       summary: Listar notificaciones de la aplicación
       security:
         - ApiKeyAuth: []
+      x-required-scopes:
+        - notifications.read
       responses:
         "200":
           description: Listar notificaciones de la aplicación
@@ -122,6 +133,8 @@ paths:
       summary: Aceptar un lote acotado
       security:
         - ApiKeyAuth: []
+      x-required-scopes:
+        - notifications.send
       responses:
         "202":
           description: Aceptar un lote acotado
@@ -135,12 +148,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/UnprocessableContent"
         "429":
           $ref: "#/components/responses/TooManyRequests"
       parameters:
@@ -152,11 +161,17 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateBulkNotificationsRequest"
       description:
-        "Códigos de error específicos: IDEMPOTENCY_KEY_CONFLICT (409);
-        SENDER_NOT_CONNECTED, DEFAULT_SENDER_NOT_CONFIGURED, SENDER_NOT_ASSIGNED_TO_APPLICATION,
-        TEMPLATE_VARIABLES_MISSING, ATTACHMENT_NOT_AVAILABLE (422); WHATSAPP_DAILY_QUOTA_EXCEEDED,
-        APPLICATION_DAILY_LIMIT_EXCEEDED, RATE_LIMIT_EXCEEDED (429). Un adjunto de
-        otra organización o aplicación responde 404."
+        "Aceptación parcial (TP-43): cada ítem se valida por separado. Los válidos
+        se aceptan en una transacción por ítem (notificación, reserva de cuota y outbox)
+        y los inválidos se informan en `items` con el código que tendrían en un envío
+        individual (p. ej. SENDER_NOT_CONNECTED, ATTACHMENT_NOT_AVAILABLE, WHATSAPP_DAILY_QUOTA_EXCEEDED,
+        ENCRYPTION_OPTIONS_INVALID o 404 RESOURCE_NOT_FOUND para un adjunto ajeno). Se
+        responde 202 con el resultado aunque se rechacen todos los ítems (`status = REJECTED`).
+        El lote se persiste (`notification_batches`) y es idempotente por `Idempotency-Key`.
+
+
+        Códigos de error del lote completo: IDEMPOTENCY_KEY_CONFLICT (409); RATE_LIMIT_EXCEEDED
+        (429)."
   /public/notifications/{notificationId}:
     get:
       tags:
@@ -165,6 +180,8 @@ paths:
       summary: Consultar notificación
       security:
         - ApiKeyAuth: []
+      x-required-scopes:
+        - notifications.read
       responses:
         "200":
           description: Consultar notificación
@@ -197,6 +214,8 @@ paths:
       summary: Consultar eventos
       security:
         - ApiKeyAuth: []
+      x-required-scopes:
+        - notifications.read
       responses:
         "200":
           description: Consultar eventos
@@ -242,6 +261,8 @@ paths:
       summary: Cancelar notificación pendiente
       security:
         - ApiKeyAuth: []
+      x-required-scopes:
+        - notifications.cancel
       responses:
         "200":
           description: Cancelar notificación pendiente
@@ -269,8 +290,75 @@ paths:
             type: string
             format: uuid
       description:
-        "Códigos de error específicos: NOTIFICATION_ALREADY_DISPATCHED
-        (409)."
+        "Cancela una notificación cuya entrega aún no salió hacia el proveedor
+        (entrega `PENDING`, `QUEUED` o `RETRY_PENDING`). Comparte caso de uso y semántica
+        con `cancelManagementNotification` (TP-36, TP-39).
+
+
+        Códigos de error específicos: RESOURCE_STATE_CONFLICT (409): la notificación
+        ya está cancelada; NOTIFICATION_ALREADY_DISPATCHED (409): la entrega ya salió
+        hacia el proveedor. Una cancelación repetida no es idempotente: no devuelve
+        200."
+  /management/notifications/{notificationId}/cancel:
+    post:
+      tags:
+        - Management Notifications
+      operationId: cancelManagementNotification
+      summary: Cancelar notificación pendiente desde el panel
+      description:
+        "Cancelación solicitada por un usuario del panel (TP-36). Reutiliza el mismo
+        caso de uso de cancelación que `cancelNotification` (Public API); solo cambian
+        la autenticación y el actor auditado.
+
+
+        Autorización: JWT del panel con membresía activa en la organización seleccionada
+        y permiso de rol `notifications.cancel`: `organization_admin` dentro de su
+        organización; `operator` solo si su rol tiene ese permiso; `viewer` nunca. `super_admin`
+        puede cancelar en cualquier organización (cancelación global), siempre auditada.
+        La organización se deriva del principal y de la membresía, nunca de la ruta:
+        una notificación inexistente o de otra organización responde 404 sin revelar
+        su existencia.
+
+
+        Estados que admiten cancelación: entrega en `PENDING`, `QUEUED` o `RETRY_PENDING`
+        (estado público `ACCEPTED` o `QUEUED`), incluidas las programadas que aún no se
+        ejecutaron. Una entrega que ya salió hacia el proveedor (`IN_PROGRESS`, `PROVIDER_ACCEPTED`,
+        `RECONCILIATION_REQUIRED`, `DELIVERED`, `READ`, `FAILED`, `DEAD_LETTER`) no se
+        cancela ni se transforma en `CANCELLED`. La auditoría registra `actor_type = USER`,
+        el usuario, la organización, la notificación y el resultado, también cuando se
+        rechaza.
+
+
+        Códigos de error específicos: RESOURCE_STATE_CONFLICT (409): la notificación
+        ya está cancelada (TP-39; misma regla que la Public API, sin idempotencia
+        con 200); NOTIFICATION_ALREADY_DISPATCHED (409): la entrega ya salió hacia el
+        proveedor. Permiso insuficiente: PERMISSION_DENIED (403)."
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Notificación cancelada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
   /public/notifications/{notificationId}/retry:
     post:
       tags:
@@ -279,6 +367,8 @@ paths:
       summary: Solicitar reenvío manual
       security:
         - ApiKeyAuth: []
+      x-required-scopes:
+        - notifications.retry
       responses:
         "202":
           description: Reenvío aceptado (nueva notificación)
@@ -338,6 +428,8 @@ paths:
       summary: Subir adjunto
       security:
         - ApiKeyAuth: []
+      x-required-scopes:
+        - attachments.upload
       responses:
         "201":
           description: Subir adjunto
@@ -382,8 +474,17 @@ paths:
         - Public Notifications
       operationId: getAttachment
       summary: Consultar metadatos de adjunto
+      description:
+        "Scope requerido: `attachments.read` (TP-28), independiente de `attachments.upload`.
+        La lectura está limitada a la organización y la aplicación propietarias del
+        adjunto, derivadas de la API Key; un adjunto de otra aplicación u organización
+        responde 404 sin revelar su existencia. Si la respuesta incluye `downloadUrl`,
+        es una URL firmada temporal (`expiresAt`) que no expone credenciales, endpoints
+        internos ni nombres de bucket u objeto de MinIO."
       security:
         - ApiKeyAuth: []
+      x-required-scopes:
+        - attachments.read
       responses:
         "200":
           description: Consultar metadatos de adjunto
@@ -416,6 +517,8 @@ paths:
       summary: Listar plantillas disponibles
       security:
         - ApiKeyAuth: []
+      x-required-scopes:
+        - templates.read
       responses:
         "200":
           description: Listar plantillas disponibles
@@ -455,6 +558,8 @@ paths:
       summary: Consultar plantilla publicada
       security:
         - ApiKeyAuth: []
+      x-required-scopes:
+        - templates.read
       responses:
         "200":
           description: Consultar plantilla publicada
@@ -811,7 +916,14 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/CreateUserRequest"
-      description: "Códigos de error específicos: RESOURCE_ALREADY_EXISTS (409)."
+      description:
+        "Crea un usuario global con contraseña temporal (TP-46), que debe cambiar en
+        su primer acceso. Lo pueden hacer `super_admin` y los usuarios con el permiso
+        `members.manage`. Para darle acceso a una organización se crea después la
+        membresía con `createMembership`.
+
+
+        Códigos de error específicos: RESOURCE_ALREADY_EXISTS (409)."
   /management/users/{resourceId}:
     get:
       tags:
@@ -1497,9 +1609,17 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateScheduledNotificationRequest"
       description:
-        "Códigos de error específicos: IDEMPOTENCY_KEY_CONFLICT (409);
-        SENDER_NOT_CONNECTED, DEFAULT_SENDER_NOT_CONFIGURED, SENDER_NOT_ASSIGNED_TO_APPLICATION,
-        TEMPLATE_VARIABLES_MISSING, ATTACHMENT_NOT_AVAILABLE (422)."
+        "Programa una notificación de la aplicación indicada en `applicationId` (TP-53).
+        Al crearla se valida igual que un envío inmediato y se persisten la notificación
+        y la programación (`PENDING`), pero **no** se reserva cuota (TP-44). Al vencer,
+        el Scheduler reserva la cuota en el día local de ejecución de la organización
+        y vuelve a comprobar el remitente. Si falla, la programación queda `FAILED` con
+        `failureCode` y la notificación en `FAILED`; no se reprograma automáticamente.
+
+
+        Códigos de error específicos: IDEMPOTENCY_KEY_CONFLICT (409); SENDER_NOT_CONNECTED,
+        DEFAULT_SENDER_NOT_CONFIGURED, SENDER_NOT_ASSIGNED_TO_APPLICATION, TEMPLATE_VARIABLES_MISSING,
+        ATTACHMENT_NOT_AVAILABLE, ENCRYPTION_OPTIONS_INVALID (422)."
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
   /management/organizations/{organizationId}/status:
@@ -1621,8 +1741,12 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateMembershipRequest"
       description:
-        "Códigos de error específicos: RESOURCE_ALREADY_EXISTS (409); ROLE_NOT_ASSIGNABLE
-        (422)."
+        "Vincula a un usuario **existente** (por email) con la organización (TP-46).
+        No crea usuarios: si el email no corresponde a ningún usuario → 422 MEMBERSHIP_USER_NOT_FOUND.
+
+
+        Códigos de error específicos: RESOURCE_ALREADY_EXISTS (409); ROLE_NOT_ASSIGNABLE,
+        MEMBERSHIP_USER_NOT_FOUND (422)."
   /management/organizations/{organizationId}/memberships/{membershipId}/roles:
     put:
       tags:
@@ -1668,8 +1792,15 @@ paths:
             schema:
               $ref: "#/components/schemas/SetMembershipRolesRequest"
       description:
-        "Códigos de error específicos: ROLE_NOT_ASSIGNABLE (422): `super_admin`
-        o rol de otra organización."
+        "Sustituye los roles de la membresía. Si la sustitución retira `organization_admin`
+        de la última membresía activa que lo tiene, se rechaza (TP-35). La validación
+        es transaccional y bloquea las membresías administradoras activas de la organización
+        para que dos solicitudes concurrentes no puedan dejarla sin administrador. El
+        intento y su resultado se auditan.
+
+
+        Códigos de error específicos: ROLE_NOT_ASSIGNABLE (422): `super_admin`
+        o rol de otra organización; LAST_ORGANIZATION_ADMIN_REQUIRED (422): la operación dejaría a la organización sin ninguna membresía activa con el rol `organization_admin` (TP-35)."
   /management/organizations/{organizationId}/memberships/{membershipId}/status:
     patch:
       tags:
@@ -1677,11 +1808,17 @@ paths:
       operationId: updateMembershipStatus
       summary: Cambiar estado de una membresía
       description:
-        Suspende, desactiva o reactiva el acceso de un usuario a una organización
+        "Suspende, desactiva o reactiva el acceso de un usuario a una organización
         sin afectar a sus otras membresías ni a su cuenta global. Permitido a
         `organization_admin` de esa organización y a `super_admin` (con auditoría).
         Una membresía no activa deja de habilitar la organización en el contexto
-        del usuario.
+        del usuario. No se puede suspender ni desactivar la última membresía activa
+        con `organization_admin` (TP-35): validación transaccional con bloqueo de
+        las membresías administradoras activas de la organización; el intento y su
+        resultado se auditan.
+
+
+        Códigos de error específicos: LAST_ORGANIZATION_ADMIN_REQUIRED (422): la operación dejaría a la organización sin ninguna membresía activa con el rol `organization_admin` (TP-35)."
       security:
         - AdminBearer: []
       responses:
@@ -1699,6 +1836,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableContent"
       parameters:
         - name: organizationId
           in: path
@@ -1724,6 +1863,10 @@ paths:
         - Applications
       operationId: setApplicationPermissions
       summary: Actualizar permisos/límites de aplicación
+      description:
+        "Fija el techo de scopes de la aplicación (TP-48): el conjunto máximo de scopes
+        (`ApiKeyScope`) que pueden tener sus API Keys. Los scopes retirados dejan de autorizar
+        de inmediato en las claves existentes."
       security:
         - AdminBearer: []
       responses:
@@ -1843,6 +1986,12 @@ paths:
         - Applications
       operationId: createApiKey
       summary: Crear API Key
+      description:
+        "Crea una API Key. Sus scopes deben estar dentro de los permisos de la aplicación
+        (TP-48). El secreto solo se devuelve en esta respuesta.
+
+
+        Códigos de error específicos: API_KEY_SCOPE_NOT_PERMITTED (422)."
       security:
         - AdminBearer: []
       responses:
@@ -1860,6 +2009,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableContent"
       parameters:
         - name: applicationId
           in: path
@@ -1912,8 +2063,14 @@ paths:
             type: string
             format: uuid
       description:
-        "Códigos de error específicos: RESOURCE_STATE_CONFLICT (409): la
-        API Key está revocada."
+        "Rotación sin solape (TP-52): en una sola transacción crea una API Key nueva
+        (nuevo `id` y secreto, mismo nombre y scopes, `rotatedFromApiKeyId` = la anterior)
+        y revoca la anterior. La respuesta contiene el nuevo `id` y el secreto, que solo
+        se muestra aquí. La auditoría conserva el id de cada clave.
+
+
+        Códigos de error específicos: RESOURCE_STATE_CONFLICT (409): la API Key está
+        revocada."
   /management/applications/{applicationId}/api-keys/{keyId}:
     delete:
       tags:
@@ -2537,6 +2694,17 @@ paths:
         - Senders
       operationId: assignApplicationSenders
       summary: Asignar remitentes a aplicación
+      description:
+        "Sustituye en una sola transacción el conjunto de remitentes autorizados
+        de la aplicación y su remitente predeterminado (TP-33). La transacción bloquea
+        las asignaciones de la aplicación para que, con solicitudes concurrentes, quede
+        como máximo un predeterminado válido por aplicación y canal. Todos los remitentes
+        deben pertenecer a la misma organización que la aplicación; uno de otra organización
+        responde 404 sin revelar su existencia.
+
+
+        Códigos de error específicos: SENDER_NOT_ASSIGNED_TO_APPLICATION (422): `defaultSenderId`
+        no está incluido en `senderIds`."
       security:
         - AdminBearer: []
       responses:
@@ -2554,6 +2722,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableContent"
       parameters:
         - name: applicationId
           in: path
@@ -3146,6 +3316,13 @@ paths:
         - Authentication
       operationId: login
       summary: Iniciar sesión de usuario
+      description:
+        "Valida `Origin` (obligatorio; debe ser el origen del panel, TP-40) y las
+        credenciales, crea la sesión del panel (familia de refresh tokens) y emite el
+        refresh token y el token CSRF de esa sesión (TP-38). El refresh token
+        se entrega solo en la cookie `refresh` (`Set-Cookie`, ver `RefreshCookie`); nunca
+        en el cuerpo. El token CSRF se devuelve en `csrfToken` y el panel lo conserva
+        solo en memoria. No requiere `X-CSRF-Token`, porque aún no existe sesión."
       security: []
       responses:
         "200":
@@ -3172,7 +3349,9 @@ paths:
         - Authentication
       operationId: refreshSession
       summary: Rotar refresh token y emitir access token
-      security: []
+      security:
+        - RefreshCookie: []
+          CsrfHeader: []
       responses:
         "200":
           description: Rotar refresh token y emitir access token
@@ -3187,15 +3366,28 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
       description:
-        Refresh token opaco se transporta mediante cookie HttpOnly; validar
-        CSRF según configuración.
+        "Requiere a la vez la cookie `refresh` y la cabecera `X-CSRF-Token`
+        (TP-37). El refresh token opaco viaja en una cookie `HttpOnly`, `Secure` en
+        producción, `SameSite=Strict` y limitada a la ruta `/api/v1/management/auth`.
+        El backend exige y valida `Origin` (TP-40), obtiene la sesión a partir de la cookie y compara
+        el `X-CSRF-Token` recibido con el token CSRF asociado a esa sesión, almacenado
+        como hash (token sincronizado con la sesión, TP-38). Si todo es válido, rota
+        el refresh token (un solo uso), reemite la cookie y genera un **nuevo** token
+        CSRF, que se devuelve en `csrfToken`; el token CSRF anterior deja de ser válido.
+        Si se presenta un refresh token ya usado, se revoca toda su familia, se elimina
+        la cookie, se audita la reutilización y se responde 401. Cookie ausente, expirada,
+        revocada o reutilizada: 401 AUTHENTICATION_REQUIRED. Token CSRF ausente o que
+        no coincide, u `Origin` ausente o no permitido: 403 PERMISSION_DENIED. El `detail` es
+        genérico y no indica qué comprobación falló."
   /management/auth/logout:
     post:
       tags:
         - Authentication
       operationId: logout
       summary: Cerrar sesión y revocar refresh token
-      security: []
+      security:
+        - RefreshCookie: []
+          CsrfHeader: []
       responses:
         "204":
           description: Sesión revocada; cookie eliminada.
@@ -3205,7 +3397,47 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-      description: Revoca la familia de refresh tokens y limpia la cookie.
+      description:
+        "Requiere a la vez la cookie `refresh` y la cabecera `X-CSRF-Token`
+        vigente (TP-37, TP-38). El backend valida `Origin`, la sesión y el token CSRF
+        asociado a ella; después revoca la sesión (familia de refresh tokens), invalida
+        el refresh token y el token CSRF, y elimina la cookie (`Max-Age=0`, con la misma
+        ruta y atributos con que se emitió). Cookie ausente o inválida: 401 AUTHENTICATION_REQUIRED.
+        Token CSRF ausente o que no coincide, u `Origin` ausente o no permitido: 403
+        PERMISSION_DENIED. El `detail` es genérico y no indica qué comprobación falló."
+  /management/auth/password:
+    post:
+      tags:
+        - Authentication
+      operationId: changePassword
+      summary: Cambiar la contraseña propia
+      description:
+        "Sustituye la contraseña del usuario autenticado (TP-46). Es la única forma
+        de salir de `mustChangePassword`. Si es correcta, guarda el nuevo hash Argon2id,
+        pone `mustChangePassword = false` y revoca las demás sesiones del usuario. La
+        sesión actual sigue activa. Contraseña actual incorrecta o nueva contraseña
+        que no cumple la política → 422 PASSWORD_CHANGE_REJECTED, sin indicar cuál de
+        las dos falló.
+
+
+        Códigos de error específicos: PASSWORD_CHANGE_REJECTED (422)."
+      security:
+        - AdminBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "204":
+          description: Contraseña cambiada.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableContent"
   /management/auth/me:
     get:
       tags:
@@ -3404,9 +3636,13 @@ paths:
       operationId: setSystemRolePermissions
       summary: Configurar permisos de un rol del sistema
       description:
-        Administración del catálogo de permisos de los roles del sistema.
+        "Administración del catálogo de permisos de los roles del sistema.
         Solo `super_admin` activo; afecta a todas las organizaciones y queda auditada.
-        No crea roles.
+        No crea roles. Solo admite códigos del catálogo `RolePermissionCode` que la matriz
+        RBAC marca como asignables a ese rol (TP-51).
+
+
+        Códigos de error específicos: PERMISSION_NOT_ASSIGNABLE (422)."
       security:
         - AdminBearer: []
       parameters:
@@ -3437,6 +3673,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableContent"
   /management/applications/{applicationId}/status:
     patch:
       tags:
@@ -3479,6 +3717,15 @@ paths:
         - Users and Roles
       operationId: updateUserStatus
       summary: Cambiar estado de usuario
+      description:
+        "Cambia el estado global del usuario, que afecta a todas sus membresías.
+        Suspender o desactivar a un usuario que es el último `organization_admin`
+        activo de alguna organización se rechaza (TP-35), con la misma validación
+        transaccional y bloqueo que en las membresías. El intento y su resultado se
+        auditan.
+
+
+        Códigos de error específicos: LAST_ORGANIZATION_ADMIN_REQUIRED (422): la operación dejaría a la organización sin ninguna membresía activa con el rol `organization_admin` (TP-35)."
       security:
         - AdminBearer: []
       parameters:
@@ -3509,6 +3756,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableContent"
   /platform/super-admins:
     get:
       tags:
@@ -3639,6 +3888,77 @@ paths:
           $ref: "#/components/responses/Conflict"
         "422":
           $ref: "#/components/responses/UnprocessableContent"
+  /platform/organizations/{organizationId}/limits:
+    get:
+      tags:
+        - Platform
+      operationId: getOrganizationLimits
+      summary: Consultar límites de una organización
+      description: Solo `super_admin` activo (TP-45).
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Límites vigentes por canal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationLimits"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags:
+        - Platform
+      operationId: setOrganizationLimits
+      summary: Fijar límites de una organización
+      description:
+        "Solo `super_admin` activo, con motivo obligatorio y auditado (TP-45). Sustituye
+        los límites de los canales indicados. Si un límite de aplicación queda por encima
+        del nuevo límite de organización, no se rechaza: el límite efectivo de la aplicación
+        es el menor de los dos."
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetOrganizationLimitsRequest"
+      responses:
+        "200":
+          description: Límites actualizados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationLimits"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -3647,12 +3967,37 @@ components:
       name: X-API-Key
       description:
         API Key de una aplicación consumidora. Los permisos son scopes propios de la
-        aplicación (p.ej. `notifications.send`, `notifications.retry`); no hereda roles
-        humanos. El actor de estas operaciones es la aplicación.
+        aplicación (catálogo cerrado `ApiKeyScope`); no hereda roles humanos. El actor
+        de estas operaciones es la aplicación. Cada operación de la Public API declara
+        su scope en la extensión `x-required-scopes`.
     AdminBearer:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description:
+        Access token del panel. Mientras el usuario tenga `mustChangePassword`,
+        solo se admiten `getCurrentUser`, `changePassword`, `refreshSession` y `logout`;
+        el resto responde 403 PASSWORD_CHANGE_REQUIRED (TP-46).
+    RefreshCookie:
+      type: apiKey
+      in: cookie
+      name: refresh
+      description:
+        Refresh token opaco del panel (TP-37). Cookie `HttpOnly`, `Secure` en
+        producción, `SameSite=Strict`, `Path=/api/v1/management/auth` y caducidad
+        igual a la del refresh token (7 días). Se rota en cada uso y se elimina al
+        cerrar sesión o al detectar reutilización. Solo la aceptan `refreshSession`
+        y `logout`; no es un esquema global.
+    CsrfHeader:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description:
+        Token anti-CSRF **sincronizado con la sesión** (TP-38), obligatorio junto
+        con `RefreshCookie` en las operaciones autenticadas por cookie (TP-37). Su valor
+        es el `csrfToken` devuelto por el último login o refresh correcto. El backend
+        lo compara con el hash asociado a la sesión que identifica la cookie. Nunca
+        viaja en la URL ni en una cookie legible (no se usa doble envío).
   schemas:
     ActionResult:
       type: object
@@ -3733,15 +4078,56 @@ components:
         scheduledAt:
           type: string
           format: date-time
+          description:
+            Ejecución diferida. Se valida al aceptar, pero la cuota diaria se reserva
+            al ejecutarse, en el día local de ejecución de la organización (TP-44).
         metadata:
           type: object
           additionalProperties:
             type: string
+          description:
+            Metadatos libres del cliente (p. ej. módulo o usuario de origen). Se
+            persisten tal cual (`notifications.metadata_json`) y no se usan para
+            autorización. No deben contener secretos ni datos personales innecesarios.
+        security:
+          $ref: "#/components/schemas/EncryptionOptions"
       oneOf:
         - required:
             - template
         - required:
             - content
+    EncryptionOptions:
+      type: object
+      description:
+        "Cifrado del contenido (TP-47). Lo aplica el servicio antes de entregar al
+        proveedor; no lo hace el proveedor. Combinaciones admitidas: `PGP` solo en
+        EMAIL (cuerpo y adjuntos, con `pgpPublicKey`); `ZIP_AES256` en EMAIL y WHATSAPP
+        y solo con adjuntos (empaqueta los adjuntos en un ZIP AES-256 con `zipPassword`);
+        `TLS_ONLY` solo en EMAIL (exige TLS en el transporte SMTP); `NONE` en todos los
+        canales. SMS solo admite `NONE`. Otra combinación → 422 ENCRYPTION_OPTIONS_INVALID.
+        `zipPassword` se guarda cifrado fuera del dominio, nunca viaja en mensajes de
+        RabbitMQ ni aparece en logs o respuestas."
+      required:
+        - encryption
+      properties:
+        encryption:
+          type: string
+          default: NONE
+          enum:
+            - NONE
+            - TLS_ONLY
+            - ZIP_AES256
+            - PGP
+        zipPassword:
+          type: string
+          format: password
+          writeOnly: true
+          description: Obligatoria con `ZIP_AES256`; prohibida en los demás modos.
+        pgpPublicKey:
+          type: string
+          description:
+            Clave pública OpenPGP en formato armored del destinatario. Obligatoria
+            con `PGP`; una clave inválida → 422 ENCRYPTION_OPTIONS_INVALID.
     CreateBulkNotificationsRequest:
       type: object
       required:
@@ -3755,19 +4141,74 @@ components:
             $ref: "#/components/schemas/CreateNotificationRequest"
     AcceptedBatch:
       type: object
+      description:
+        "Resultado de un lote (TP-43, aceptación parcial). Cada ítem se valida y
+        acepta o rechaza por separado: los válidos se aceptan (y consumen cuota) y los
+        inválidos se informan en `items` con su código de error. El lote completo es
+        idempotente por `Idempotency-Key`."
       required:
         - batchId
+        - status
         - acceptedCount
+        - rejectedCount
+        - items
       properties:
         batchId:
           type: string
           format: uuid
-        acceptedCount:
-          type: integer
-        rejectedCount:
-          type: integer
         status:
           type: string
+          enum:
+            - ACCEPTED
+            - PARTIALLY_ACCEPTED
+            - REJECTED
+        acceptedCount:
+          type: integer
+          minimum: 0
+        rejectedCount:
+          type: integer
+          minimum: 0
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BatchItemResult"
+    BatchItemResult:
+      type: object
+      required:
+        - index
+        - result
+      properties:
+        index:
+          type: integer
+          minimum: 0
+          description: Posición del ítem en `items` de la solicitud.
+        result:
+          type: string
+          enum:
+            - ACCEPTED
+            - REJECTED
+        notificationId:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Solo para ítems aceptados.
+        error:
+          oneOf:
+            - type: "null"
+            - type: object
+              required:
+                - status
+                - code
+              properties:
+                status:
+                  type: integer
+                  description: Código HTTP que tendría el error en un envío individual.
+                code:
+                  type: string
+                  description: Código del catálogo de errores (p. ej. SENDER_NOT_CONNECTED, WHATSAPP_DAILY_QUOTA_EXCEEDED).
+                detail:
+                  type: string
     NotificationStatus:
       type: object
       required:
@@ -3781,8 +4222,26 @@ components:
           format: uuid
         channel:
           type: string
+          enum:
+            - WHATSAPP
+            - EMAIL
+            - SMS
         status:
           $ref: "#/components/schemas/NotificationPublicStatus"
+        encryption:
+          type: string
+          description: Modo de cifrado solicitado (TP-47). Nunca incluye secretos.
+          enum:
+            - NONE
+            - TLS_ONLY
+            - ZIP_AES256
+            - PGP
+        batchId:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Lote de origen, si la notificación llegó por `createBulkNotifications`.
         recipient:
           type: object
           additionalProperties: true
@@ -3858,12 +4317,17 @@ components:
         downloadUrl:
           type: string
           format: uri
+          description:
+            URL firmada temporal y de corta duración, generada para la aplicación
+            propietaria. No contiene credenciales ni datos internos de MinIO (endpoint
+            interno, bucket o clave de objeto).
         expiresAt:
           type: string
           format: date-time
       description:
         Metadatos del adjunto; el binario vive en MinIO (bucket privado)
-        y se descarga con URL firmada de corta duración.
+        y se descarga con URL firmada de corta duración. Lectura con scope
+        `attachments.read` (TP-28).
     TemplateReference:
       type: object
       required:
@@ -3884,14 +4348,24 @@ components:
         id:
           type: string
           format: uuid
+        applicationId:
+          type: string
+          format: uuid
         code:
           type: string
         name:
           type: string
         channel:
           type: string
+          enum:
+            - WHATSAPP
+            - EMAIL
+            - SMS
         status:
           type: string
+          enum:
+            - ACTIVE
+            - DISABLED
         currentVersion:
           type: integer
     TemplatePage:
@@ -3940,6 +4414,10 @@ components:
           type: string
         status:
           type: string
+          enum:
+            - ACTIVE
+            - SUSPENDED
+            - DISABLED
         timezone:
           type: string
           description:
@@ -3975,6 +4453,10 @@ components:
           type: string
         status:
           type: string
+          enum:
+            - ACTIVE
+            - SUSPENDED
+            - DISABLED
         timezone:
           type: string
           readOnly: true
@@ -3986,19 +4468,28 @@ components:
       required:
         - email
         - displayName
+        - temporaryPassword
       properties:
         email:
           type: string
           format: email
         displayName:
           type: string
+        temporaryPassword:
+          type: string
+          format: password
+          writeOnly: true
+          description:
+            Contraseña temporal fijada por el administrador (TP-46). Se guarda
+            solo como hash Argon2id; nunca se devuelve ni se registra. El usuario
+            debe cambiarla en su primer acceso (`mustChangePassword`).
     UpdateUserRequest:
       type: object
       properties:
         displayName:
           type: string
-        status:
-          type: string
+      description:
+        El estado del usuario se cambia solo con `updateUserStatus` (TP-50).
     User:
       type: object
       properties:
@@ -4012,6 +4503,14 @@ components:
           type: string
         status:
           type: string
+          enum:
+            - ACTIVE
+            - SUSPENDED
+            - DISABLED
+        mustChangePassword:
+          type: boolean
+          readOnly: true
+          description: El usuario aún no ha sustituido su contraseña temporal (TP-46).
     Role:
       type: object
       properties:
@@ -4029,7 +4528,7 @@ components:
         permissions:
           type: array
           items:
-            type: string
+            $ref: "#/components/schemas/RolePermissionCode"
       description:
         Rol de organización del catálogo del sistema (organization_admin,
         operator, viewer). Lo administra la plataforma; no existen roles personalizados
@@ -4052,6 +4551,12 @@ components:
           type: string
         name:
           type: string
+        isDefault:
+          type: boolean
+          default: false
+          description:
+            Marcarla como predeterminada de su canal (TP-49). Desmarca la anterior
+            en la misma transacción.
         configuration:
           type: object
           additionalProperties: true
@@ -4064,6 +4569,11 @@ components:
       properties:
         name:
           type: string
+        isDefault:
+          type: boolean
+          description:
+            Marcarla como predeterminada de su canal (TP-49). Desmarca la anterior
+            en la misma transacción.
         configuration:
           type: object
           additionalProperties: true
@@ -4075,20 +4585,58 @@ components:
           format: uuid
         providerCode:
           type: string
+        channel:
+          type: string
+          enum:
+            - WHATSAPP
+            - EMAIL
+            - SMS
         name:
           type: string
         status:
           type: string
+          enum:
+            - ACTIVE
+            - DISABLED
+        isDefault:
+          type: boolean
+          description:
+            Cuenta predeterminada de la organización para su canal (TP-49). Como
+            máximo una por organización y canal; se usa en Email y SMS cuando no hay
+            otra selección. WhatsApp se resuelve por remitente.
         credentialsConfigured:
           type: boolean
     ProviderDefinitionPage:
       type: object
+      description:
+        Página de resultados (TP-34). `total` es el número de resultados que
+        coinciden con los filtros aplicados, antes de paginar.
+      required:
+        - items
+        - page
+        - pageSize
+        - total
       properties:
         items:
           type: array
           items:
             type: object
             additionalProperties: true
+        page:
+          type: integer
+          minimum: 1
+          description: Número de página devuelto (base 1).
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Tamaño de página aplicado.
+        total:
+          type: integer
+          minimum: 0
+          description:
+            Total de resultados que coinciden con los filtros aplicados, antes
+            de paginar.
     ProviderAccountPage:
       type: object
       properties:
@@ -4177,8 +4725,16 @@ components:
           format: uuid
         name:
           type: string
+          description:
+            Nombre visible. El identificador de instancia en Evolution lo genera
+            el backend y no se expone.
         connectionStatus:
           type: string
+          enum:
+            - CREATED
+            - CONNECTING
+            - CONNECTED
+            - DISCONNECTED
         lastConnectedAt:
           type: string
           format: date-time
@@ -4187,11 +4743,34 @@ components:
           format: uuid
     ProviderInstancePage:
       type: object
+      description:
+        Página de resultados (TP-34). `total` es el número de resultados que
+        coinciden con los filtros aplicados, antes de paginar.
+      required:
+        - items
+        - page
+        - pageSize
+        - total
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/ProviderInstance"
+        page:
+          type: integer
+          minimum: 1
+          description: Número de página devuelto (base 1).
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Tamaño de página aplicado.
+        total:
+          type: integer
+          minimum: 0
+          description:
+            Total de resultados que coinciden con los filtros aplicados, antes
+            de paginar.
     QrResponse:
       type: object
       required:
@@ -4216,15 +4795,44 @@ components:
           type: string
         status:
           type: string
-        isDefault:
-          type: boolean
+          enum:
+            - ACTIVE
+            - DISCONNECTED
+            - DISABLED
+      description:
+        Remitente WhatsApp de la organización. No tiene atributo de predeterminado
+        propio (TP-33). El remitente predeterminado se define **por aplicación**
+        con `defaultSenderId` en `assignApplicationSenders`.
     SenderPage:
       type: object
+      description:
+        Página de resultados (TP-34). `total` es el número de resultados que
+        coinciden con los filtros aplicados, antes de paginar.
+      required:
+        - items
+        - page
+        - pageSize
+        - total
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/Sender"
+        page:
+          type: integer
+          minimum: 1
+          description: Número de página devuelto (base 1).
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Tamaño de página aplicado.
+        total:
+          type: integer
+          minimum: 0
+          description:
+            Total de resultados que coinciden con los filtros aplicados, antes
+            de paginar.
     AssignSendersRequest:
       type: object
       required:
@@ -4240,13 +4848,27 @@ components:
             - string
             - "null"
           format: uuid
+          description:
+            Remitente predeterminado de **esta aplicación** (TP-33). Debe estar incluido
+            en `senderIds` y pertenecer a la misma organización que la aplicación. Como
+            máximo hay un predeterminado válido por aplicación y canal. `null` deja la
+            aplicación sin predeterminado, y los envíos sin `senderId` se rechazan con
+            422 DEFAULT_SENDER_NOT_CONFIGURED. No existe un predeterminado global por
+            organización.
     CreateTemplateRequest:
       type: object
       required:
+        - applicationId
         - code
         - name
         - channel
       properties:
+        applicationId:
+          type: string
+          format: uuid
+          description:
+            Aplicación propietaria (TP-53). Debe pertenecer a la organización
+            seleccionada; si no, 404. No es fuente de autoridad.
         code:
           type: string
         name:
@@ -4264,6 +4886,9 @@ components:
           type: string
         status:
           type: string
+          enum:
+            - ACTIVE
+            - DISABLED
     CreateTemplateVersionRequest:
       type: object
       required:
@@ -4291,13 +4916,42 @@ components:
           type: string
         status:
           type: string
+          enum:
+            - PUBLISHED
+            - ARCHIVED
+          description:
+            Una versión se publica al crearse y es inmutable; no hay borradores
+            en v1 (TP-50). `ARCHIVED` impide usarla en nuevos envíos.
     TemplateVersionPage:
       type: object
+      description:
+        Página de resultados (TP-34). `total` es el número de resultados que
+        coinciden con los filtros aplicados, antes de paginar.
+      required:
+        - items
+        - page
+        - pageSize
+        - total
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/TemplateVersion"
+        page:
+          type: integer
+          minimum: 1
+          description: Número de página devuelto (base 1).
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Tamaño de página aplicado.
+        total:
+          type: integer
+          minimum: 0
+          description:
+            Total de resultados que coinciden con los filtros aplicados, antes
+            de paginar.
     PreviewTemplateRequest:
       type: object
       required:
@@ -4329,14 +4983,25 @@ components:
     CreateCampaignRequest:
       type: object
       required:
+        - applicationId
         - name
         - channel
         - templateVersionId
       properties:
+        applicationId:
+          type: string
+          format: uuid
+          description:
+            Aplicación propietaria (TP-53). Debe pertenecer a la organización
+            seleccionada; si no, 404.
         name:
           type: string
         channel:
           type: string
+          enum:
+            - WHATSAPP
+            - EMAIL
+            - SMS
         templateVersionId:
           type: string
           format: uuid
@@ -4362,12 +5027,26 @@ components:
         id:
           type: string
           format: uuid
+        applicationId:
+          type: string
+          format: uuid
         name:
           type: string
         status:
           type: string
+          enum:
+            - DRAFT
+            - SCHEDULED
+            - RUNNING
+            - PAUSED
+            - COMPLETED
+            - CANCELLED
         channel:
           type: string
+          enum:
+            - WHATSAPP
+            - EMAIL
+            - SMS
         createdAt:
           type: string
           format: date-time
@@ -4386,17 +5065,47 @@ components:
           type: integer
     CampaignRecipientPage:
       type: object
+      description:
+        Página de resultados (TP-34). `total` es el número de resultados que
+        coinciden con los filtros aplicados, antes de paginar.
+      required:
+        - items
+        - page
+        - pageSize
+        - total
       properties:
         items:
           type: array
           items:
             type: object
             additionalProperties: true
+        page:
+          type: integer
+          minimum: 1
+          description: Número de página devuelto (base 1).
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Tamaño de página aplicado.
+        total:
+          type: integer
+          minimum: 0
+          description:
+            Total de resultados que coinciden con los filtros aplicados, antes
+            de paginar.
     CreateScheduledNotificationRequest:
       type: object
       required:
+        - applicationId
         - notification
       properties:
+        applicationId:
+          type: string
+          format: uuid
+          description:
+            Aplicación en cuyo nombre se programa (TP-53). Debe pertenecer a la
+            organización seleccionada; si no, 404.
         notification:
           $ref: "#/components/schemas/CreateNotificationRequest"
         executeAt:
@@ -4411,11 +5120,29 @@ components:
         id:
           type: string
           format: uuid
+        applicationId:
+          type: string
+          format: uuid
+        notificationId:
+          type: string
+          format: uuid
         status:
           type: string
+          enum:
+            - PENDING
+            - EXECUTED
+            - CANCELLED
+            - FAILED
         executeAt:
           type: string
           format: date-time
+        failureCode:
+          type:
+            - string
+            - "null"
+          description:
+            Código del catálogo de errores cuando la ejecución falla (p. ej. WHATSAPP_DAILY_QUOTA_EXCEEDED
+            o SENDER_NOT_CONNECTED, TP-44).
         timezone:
           type: string
           readOnly: true
@@ -4436,6 +5163,10 @@ components:
           format: uuid
         status:
           type: string
+          enum:
+            - ACTIVE
+            - SUSPENDED
+            - DISABLED
         roles:
           type: array
           items:
@@ -4443,11 +5174,34 @@ components:
           description: Roles de organización asignados en esta membresía.
     MembershipPage:
       type: object
+      description:
+        Página de resultados (TP-34). `total` es el número de resultados que
+        coinciden con los filtros aplicados, antes de paginar.
+      required:
+        - items
+        - page
+        - pageSize
+        - total
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/Membership"
+        page:
+          type: integer
+          minimum: 1
+          description: Número de página devuelto (base 1).
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Tamaño de página aplicado.
+        total:
+          type: integer
+          minimum: 0
+          description:
+            Total de resultados que coinciden con los filtros aplicados, antes
+            de paginar.
     CreateMembershipRequest:
       type: object
       required:
@@ -4496,8 +5250,14 @@ components:
       properties:
         permissions:
           type: array
+          uniqueItems: true
           items:
-            type: string
+            $ref: "#/components/schemas/ApiKeyScope"
+          description:
+            Techo de scopes de la aplicación (TP-48). Ninguna API Key de la aplicación
+            puede tener un scope fuera de este conjunto. Al reducirlo, los scopes retirados
+            dejan de autorizar de inmediato en las claves existentes (scopes efectivos
+            = scopes de la clave ∩ permisos de la aplicación).
     SetApplicationLimitsRequest:
       type: object
       properties:
@@ -4517,11 +5277,26 @@ components:
           type: string
         scopes:
           type: array
+          uniqueItems: true
           items:
-            type: string
+            $ref: "#/components/schemas/ApiKeyScope"
         expiresAt:
           type: string
           format: date-time
+    ApiKeyScope:
+      type: string
+      description:
+        Catálogo cerrado de scopes de API Key de la Public API (TP-28). Cada
+        operación pública declara el suyo en `x-required-scopes`; la lectura de
+        adjuntos (`attachments.read`) es independiente de la subida (`attachments.upload`).
+      enum:
+        - notifications.send
+        - notifications.read
+        - notifications.cancel
+        - notifications.retry
+        - attachments.upload
+        - attachments.read
+        - templates.read
     CreatedApiKey:
       type: object
       properties:
@@ -4538,6 +5313,14 @@ components:
           format: date-time
     ApiKeyPage:
       type: object
+      description:
+        Página de resultados (TP-34). `total` es el número de resultados que
+        coinciden con los filtros aplicados, antes de paginar.
+      required:
+        - items
+        - page
+        - pageSize
+        - total
       properties:
         items:
           type: array
@@ -4547,14 +5330,44 @@ components:
               id:
                 type: string
                 format: uuid
+              name:
+                type: string
               prefix:
                 type: string
+              scopes:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiKeyScope"
+              createdAt:
+                type: string
+                format: date-time
+              rotatedFromApiKeyId:
+                type:
+                  - string
+                  - "null"
+                format: uuid
+                description: Clave a la que sustituyó esta al rotar (TP-52).
               expiresAt:
                 type: string
                 format: date-time
               revokedAt:
                 type: string
                 format: date-time
+        page:
+          type: integer
+          minimum: 1
+          description: Número de página devuelto (base 1).
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Tamaño de página aplicado.
+        total:
+          type: integer
+          minimum: 0
+          description:
+            Total de resultados que coinciden con los filtros aplicados, antes
+            de paginar.
     RotateCredentialsRequest:
       type: object
       properties:
@@ -4573,19 +5386,65 @@ components:
       additionalProperties: true
     ProviderHealthPage:
       type: object
+      description:
+        Página de resultados (TP-34). `total` es el número de resultados que
+        coinciden con los filtros aplicados, antes de paginar.
+      required:
+        - items
+        - page
+        - pageSize
+        - total
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/ProviderHealth"
+        page:
+          type: integer
+          minimum: 1
+          description: Número de página devuelto (base 1).
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Tamaño de página aplicado.
+        total:
+          type: integer
+          minimum: 0
+          description:
+            Total de resultados que coinciden con los filtros aplicados, antes
+            de paginar.
     AuditEventPage:
       type: object
+      description:
+        Página de resultados (TP-34). `total` es el número de resultados que
+        coinciden con los filtros aplicados, antes de paginar.
+      required:
+        - items
+        - page
+        - pageSize
+        - total
       properties:
         items:
           type: array
           items:
             type: object
             additionalProperties: true
+        page:
+          type: integer
+          minimum: 1
+          description: Número de página devuelto (base 1).
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Tamaño de página aplicado.
+        total:
+          type: integer
+          minimum: 0
+          description:
+            Total de resultados que coinciden con los filtros aplicados, antes
+            de paginar.
     OrganizationPage:
       type: object
       properties:
@@ -4714,6 +5573,74 @@ components:
           type: integer
         total:
           type: integer
+    OrganizationLimits:
+      type: object
+      description:
+        "Límites de la organización por canal (TP-45). `dailyLimit` nulo = sin
+        límite diario en ese canal. El límite efectivo de una aplicación es el menor
+        entre el suyo y el de la organización. WhatsApp se crea con 500 por día."
+      required:
+        - organizationId
+        - limits
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        limits:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationChannelLimit"
+    OrganizationChannelLimit:
+      type: object
+      required:
+        - channel
+      properties:
+        channel:
+          type: string
+          enum:
+            - WHATSAPP
+            - EMAIL
+            - SMS
+        dailyLimit:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        ratePerMinute:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+    SetOrganizationLimitsRequest:
+      type: object
+      required:
+        - limits
+        - reason
+      properties:
+        limits:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/OrganizationChannelLimit"
+        reason:
+          type: string
+          minLength: 1
+          description: Motivo obligatorio, auditado.
+    ChangePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          writeOnly: true
+        newPassword:
+          type: string
+          format: password
+          writeOnly: true
+          description: Debe cumplir la política de contraseñas (pendiente TP-55).
     LoginRequest:
       type: object
       required:
@@ -4728,7 +5655,21 @@ components:
           format: password
     LoginResponse:
       type: object
+      description:
+        Respuesta de `login` y `refreshSession`. El refresh token no forma parte
+        del cuerpo; viaja solo en la cookie `refresh`.
+      required:
+        - csrfToken
       properties:
+        csrfToken:
+          type: string
+          description:
+            Token CSRF de la sesión (TP-38), de 32 bytes aleatorios (256 bits) de un
+            generador criptográficamente seguro, codificados como texto opaco; el backend
+            guarda solo su SHA-256 y lo compara en tiempo constante (TP-40). Cada login y cada refresh correcto devuelven
+            uno nuevo e invalidan el anterior. El panel lo conserva solo en memoria
+            (nunca en `localStorage`, `sessionStorage`, cookies ni URLs) y lo envía
+            en `X-CSRF-Token`.
         accessToken:
           type: string
         tokenType:
@@ -4752,6 +5693,12 @@ components:
         activeOrganizationId:
           type: string
           format: uuid
+        mustChangePassword:
+          type: boolean
+          description:
+            "`true` mientras el usuario conserve la contraseña temporal (TP-46).
+            Solo puede usar `getCurrentUser`, `changePassword`, `refreshSession`
+            y `logout`; el resto responde 403 PASSWORD_CHANGE_REQUIRED."
         memberships:
           type: array
           items:
@@ -4790,6 +5737,26 @@ components:
         - READ
         - FAILED
         - CANCELLED
+    RolePermissionCode:
+      type: string
+      description:
+        Catálogo cerrado de permisos de rol humanos (TP-51). Distinto del catálogo
+        de scopes de API Key (`ApiKeyScope`).
+      enum:
+        - members.manage
+        - applications.manage
+        - api_keys.manage
+        - providers.manage
+        - whatsapp.connect
+        - senders.assign
+        - templates.manage
+        - notifications.read
+        - notifications.cancel
+        - campaigns.manage
+        - campaigns.read
+        - scheduling.manage
+        - dashboard.read
+        - audit.read
     SetRolePermissionsRequest:
       type: object
       required:
@@ -4799,8 +5766,8 @@ components:
           type: array
           uniqueItems: true
           items:
-            type: string
-          description: Códigos del catálogo `permissions` de la plataforma.
+            $ref: "#/components/schemas/RolePermissionCode"
+          description: Códigos del catálogo `permissions` de la plataforma (TP-51).
     PlatformRoleAssignment:
       type: object
       required:
@@ -4921,7 +5888,10 @@ components:
             code: AUTHENTICATION_REQUIRED
             traceId: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01
     Forbidden:
-      description: "Autenticado sin permiso para la operación. Código: PERMISSION_DENIED."
+      description:
+        "Autenticado sin permiso para la operación. Códigos: PERMISSION_DENIED;
+        PASSWORD_CHANGE_REQUIRED en la Management y la Platform API mientras el usuario
+        conserve su contraseña temporal."
       content:
         application/problem+json:
           schema:
@@ -5000,7 +5970,9 @@ components:
         "Solicitud bien formada que incumple una regla de negocio. Códigos
         según operación: SENDER_NOT_CONNECTED, DEFAULT_SENDER_NOT_CONFIGURED, SENDER_NOT_ASSIGNED_TO_APPLICATION,
         TEMPLATE_VARIABLES_MISSING, ATTACHMENT_NOT_AVAILABLE, APPLICATION_LIMIT_EXCEEDS_ORGANIZATION_LIMIT,
-        ROLE_NOT_ASSIGNABLE, LAST_SUPER_ADMIN_REVOCATION_FORBIDDEN, PROVIDER_DIAGNOSTICS_NOT_SUPPORTED."
+        ROLE_NOT_ASSIGNABLE, LAST_SUPER_ADMIN_REVOCATION_FORBIDDEN, LAST_ORGANIZATION_ADMIN_REQUIRED,
+        PROVIDER_DIAGNOSTICS_NOT_SUPPORTED, MEMBERSHIP_USER_NOT_FOUND, ENCRYPTION_OPTIONS_INVALID,
+        API_KEY_SCOPE_NOT_PERMITTED, PASSWORD_CHANGE_REJECTED, PERMISSION_NOT_ASSIGNABLE."
       content:
         application/problem+json:
           schema:

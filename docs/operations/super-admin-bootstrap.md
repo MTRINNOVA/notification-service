@@ -22,7 +22,7 @@
 **Pasos**
 
 1. Verificar en una transacción, con bloqueo de las asignaciones de `super_admin`, que no existe ninguna asignación activa. Si existe, **terminar sin cambios**: el bootstrap no sustituye a la Platform API.
-2. Crear o localizar el usuario por email normalizado. Si se crea, la credencial inicial se entrega por un canal seguro, es de un solo uso y su cambio se fuerza en el primer acceso (se detalla en la fase de autenticación).
+2. Crear o localizar el usuario por email normalizado. Si se crea, la credencial inicial es una contraseña temporal (TP-46): se entrega por un canal seguro y el usuario queda con `must_change_password = true`, por lo que debe cambiarla en su primer acceso ([ADR-0011](../adr/0011-admin-identity.md#alta-de-usuarios-con-contraseña-temporal-tp-46-aprobada-2026-11-15)).
 3. Insertar `platform_role_assignments` con `role_code = 'super_admin'`, `granted_by_actor_type = 'SYSTEM_BOOTSTRAP'`, `granted_by = NULL` y `grant_reason`.
 4. Registrar `audit_logs` con `actor_type = SYSTEM_BOOTSTRAP`, acción de concesión, recurso, resultado y correlation id.
 5. Confirmar la transacción y comunicar el resultado sin mostrar secretos.

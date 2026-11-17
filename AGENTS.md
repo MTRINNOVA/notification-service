@@ -71,7 +71,7 @@ tests/
 
 - Cada proyecto tiene un `*AssemblyMarker` en `Common/` usado por las pruebas de arquitectura. `Api`, `Worker` y `Scheduler` son adaptadores de entrada y _composition roots_.
 - Worker y Scheduler componen el host en `Common/*HostBuilderExtensions.cs` (`AddWorkerHost`/`AddSchedulerHost`); `Program.cs` solo construye y ejecuta. Registrar servicios ahí, no en `Program.cs`.
-- No existe `Scheduler.Tests`: sus pruebas de composición están en `Architecture.Tests` (TP-06). No crear proyectos nuevos sin autorización.
+- No existe todavía `Scheduler.Tests`: sus pruebas de composición están en `Architecture.Tests`. TP-06 (aprobado) prevé crearlo con la primera lógica funcional propia del Scheduler, nunca vacío ([scheduler-tests.md](docs/testing/scheduler-tests.md)). No crear proyectos nuevos sin autorización.
 
 ## 6. Dirección de dependencias
 
@@ -141,7 +141,7 @@ Domain no puede depender de: EF Core, Npgsql, RabbitMQ.Client, StackExchange.Red
 - El `organization_id`/`application_id` efectivo **se deriva del principal autenticado** (API Key → aplicación → organización; JWT → membresía activa). Un ID en ruta, query o body nunca es fuente de autoridad.
 - Toda consulta y comando de negocio filtra por organización y, cuando aplique, aplicación. Recurso de otro tenant → `404` (no revelar existencia).
 - Remitentes: una aplicación puede tener varios; un remitente puede asignarse a varias aplicaciones **de la misma organización**; `senderId` explícito o el predeterminado de la aplicación; sin predeterminado válido → error de negocio documentado.
-- Cuotas WhatsApp: 500/día por organización (agregada entre aplicaciones y números), reinicio 00:00 en la zona horaria de la organización; límites por aplicación solo pueden reducir el efectivo; validación fallida no consume; aceptación consume; reintentos técnicos e idempotencia no consumen de nuevo; exceso → `429` con código estable.
+- Cuotas WhatsApp: 500/día por organización por defecto (`organization_limits`, solo `super_admin` lo cambia, TP-45), agregada entre aplicaciones y números, reinicio 00:00 en la zona horaria de la organización; límite efectivo = menor entre aplicación y organización; validación fallida no consume; aceptación consume (las programadas, al ejecutarse, TP-44; en lotes, cada ítem aceptado, TP-43); reintentos técnicos e idempotencia no consumen de nuevo; exceso → `429` con código estable.
 - Tiempo: zona horaria IANA obligatoria por organización (default `America/Lima`); las aplicaciones la heredan salvo override permitido; instantes en UTC; cálculos de calendario, programación y cuotas en la zona de la organización.
 
 ## 10. Integraciones y adaptadores
@@ -191,8 +191,8 @@ Detalle en [rabbitmq-outbox.md](docs/messaging/rabbitmq-outbox.md).
 ## 13. Seguridad
 
 - Sin secretos en código, `appsettings*.json` versionados, tests ni mensajes. Los `appsettings*.json` no llevan credenciales, ni siquiera de ejemplo. Secretos locales: User Secrets (los tres hosts comparten `UserSecretsId`) o variables de entorno. No subir `.env` reales; `.env.example` solo con placeholders ficticios. Los mensajes de validación de configuración nunca incluyen el valor validado.
-- Panel: access JWT (~15 min) validando firma, issuer, audience, expiración y `kid`; refresh token opaco, rotativo, guardado como hash, en cookie `HttpOnly` + `Secure` + `SameSite`; detección de reutilización; protección CSRF; contraseñas Argon2id.
-- Aplicaciones: `X-API-Key` por aplicación, guardada como hash con prefijo, mostrada una sola vez, con scopes, expiración, rotación y revocación. Las API Keys no heredan permisos humanos.
+- Panel: access JWT (~15 min) validando firma, issuer, audience, expiración y `kid`; refresh token opaco, rotativo, guardado como hash, en cookie `refresh` (`HttpOnly` + `Secure` + `SameSite=Strict`, ruta `/api/v1/management/auth`); detección de reutilización; protección CSRF con la cabecera `X-CSRF-Token` en refresh/logout (TP-37), con un token sincronizado con la sesión, devuelto en `csrfToken`, guardado como SHA-256 (`refresh_tokens.csrf_token_hash`) y conservado por el panel solo en memoria (TP-38, TP-40); `Origin` obligatorio en login/refresh/logout; usuarios nuevos con contraseña temporal y cambio obligatorio (TP-46); contraseñas Argon2id.
+- Aplicaciones: `X-API-Key` por aplicación, guardada como hash con prefijo, mostrada una sola vez, con scopes (catálogo cerrado `ApiKeyScope`; `attachments.read` es independiente de `attachments.upload`, TP-28), expiración, rotación y revocación. Las API Keys no heredan permisos humanos.
 - Autorización en el backend en cada operación (RBAC + ámbito); el frontend no es control de seguridad. Pruebas negativas obligatorias contra IDOR y acceso cruzado.
 - Credenciales de proveedores cifradas (AES-GCM o secret manager, clave fuera de PostgreSQL); nunca devueltas por la API, al frontend ni a aplicaciones consumidoras.
 - Logs estructurados sin tokens, contraseñas, API Keys, QR, contenido completo ni datos personales innecesarios (redactar teléfonos/destinatarios).
@@ -208,6 +208,7 @@ Detalle en [rabbitmq-outbox.md](docs/messaging/rabbitmq-outbox.md).
 | Infrastructure.Tests | Persistencia contra PostgreSQL real con **Testcontainers** (TP-02, aprobado y planificado para la Fase 2; [integration-testing-postgresql.md](docs/testing/integration-testing-postgresql.md)); nunca EF InMemory. También adaptadores y Outbox/Inbox |
 | Api.Tests            | Integración HTTP, contratos OpenAPI, autenticación/autorización, aislamiento multi-tenant                                                                                                                                                             |
 | Worker.Tests         | Consumo, idempotencia, reintentos, DLQ                                                                                                                                                                                                                |
+| Scheduler.Tests (futuro, TP-06) | Selección por vencimiento, zona horaria, duplicados, concurrencia, reintentos y recuperación ([scheduler-tests.md](docs/testing/scheduler-tests.md)). Se crea con la primera lógica propia del Scheduler |
 | Architecture.Tests   | Dirección de dependencias y reglas de capas                                                                                                                                                                                                           |
 
 - Proveedores: probar con adaptadores simulados y pruebas de contrato; nunca contra producción.
@@ -259,6 +260,7 @@ No ejecutar `dotnet ef migrations add` ni `dotnet ef database update` fuera de l
 - Compose del backend: API, Worker, Scheduler, PostgreSQL, RabbitMQ, Redis, MinIO. Evolution/Postfix pueden ir en Compose separado.
 - Traefik externo: conectar solo API (y Admin en su repo) a la red externa existente mediante labels; nombre real de la red pendiente de confirmar.
 - Datos sin puertos publicados al host en producción; imágenes por versión/digest (nunca `latest`); usuario no-root; healthchecks liveness/readiness; límites de recursos.
+- Worker y Scheduler expondrán `/health/live` y `/health/ready` por HTTP interno, sin Traefik (TP-05, aprobado; [health-checks.md](docs/deployment/health-checks.md)). CI de PR y publicación controlada en GHCR con GitHub Actions; sin despliegue automático al VPS (TP-07, aprobado; [ci-cd.md](docs/deployment/ci-cd.md)). Ninguno está implementado: implementarlos requiere autorización propia.
 
 ## 18. Trabajo por fases
 
@@ -303,7 +305,24 @@ También están aprobadas (2026-11-15) las decisiones técnicas TP-02, TP-09 y T
 
 Además, **TP-21** (el reenvío manual lo solicita la aplicación con API Key y scope `notifications.retry`; actor auditado `APPLICATION`, nunca `USER`) y **TP-22** (`openapi.yaml` como fuente única; esquemas sin uso eliminados; estado de membresía incorporado) están cerrados.
 
-Puntos abiertos que requieren aprobación (p.ej. TP-28, TP-33 a TP-37): ver [technical-pending-register.md](docs/operations/technical-pending-register.md). Mientras sigan abiertos:
+Aprobadas y especificadas el 2026-11-15, con **implementación pendiente** (no están en el código):
+
+| ID    | Regla vigente | Normativa |
+| ----- | ------------- | --------- |
+| TP-05 | Worker y Scheduler: `/health/live` y `/health/ready` internos | [health-checks.md](docs/deployment/health-checks.md) |
+| TP-06 | `Scheduler.Tests` con la primera lógica propia del Scheduler; nunca vacío | [scheduler-tests.md](docs/testing/scheduler-tests.md) |
+| TP-07 | GitHub Actions: CI de PR y publicación controlada en GHCR (tags inmutables, digest); sin despliegue automático | [ci-cd.md](docs/deployment/ci-cd.md) |
+| TP-28 | `getAttachment` exige `attachments.read`; `uploadAttachment`, `attachments.upload` | [openapi.yaml](docs/api/openapi.yaml), [rbac-matrix.md](docs/security/rbac-matrix.md) |
+| TP-33 | Remitente predeterminado solo por aplicación (`application_senders.is_default`, `defaultSenderId`) | [erd.md](docs/data/erd.md) |
+| TP-34 | Esquemas `*Page` con `items`, `page`, `pageSize` y `total` requeridos | [openapi.yaml](docs/api/openapi.yaml) |
+| TP-35 | Nunca dejar una organización sin `organization_admin` activo (`422 LAST_ORGANIZATION_ADMIN_REQUIRED`) | [ADR-0011](docs/adr/0011-admin-identity.md) |
+| TP-36 | `POST /management/notifications/{notificationId}/cancel`, mismo caso de uso que la Public API | [openapi.yaml](docs/api/openapi.yaml), [api-design.md](docs/api/api-design.md) |
+| TP-37 | Refresh/logout con `RefreshCookie` (`refresh`) + `CsrfHeader` (`X-CSRF-Token`) | [ADR-0011](docs/adr/0011-admin-identity.md) |
+| TP-38 | Token CSRF sincronizado con la sesión, devuelto en `csrfToken` por login y refresh; sin doble envío por cookie | [ADR-0011](docs/adr/0011-admin-identity.md), [admin-panel-auth-contract.md](docs/api/admin-panel-auth-contract.md) |
+| TP-39 | Cancelar una notificación ya cancelada → `409 RESOURCE_STATE_CONFLICT` en ambas APIs | [api-design.md](docs/api/api-design.md) |
+| TP-40, TP-43 a TP-53 | Preparación de la Fase 2: parámetros CSRF, lotes parciales, cuota de programadas al ejecutar, `organization_limits`, contraseña temporal, cifrado PGP/ZIP, techo de scopes, cuenta predeterminada, catálogos de estados y permisos, rotación de API Key y alineación ERD ↔ OpenAPI | [DECISIONS-v1.5.md](docs/project/DECISIONS-v1.5.md), [erd.md](docs/data/erd.md) |
+
+Puntos abiertos que requieren aprobación (p.ej. TP-41, TP-42 y TP-54 a TP-56; ninguno bloquea el modelo de datos de la Fase 2): ver [technical-pending-register.md](docs/operations/technical-pending-register.md). Mientras sigan abiertos:
 
 - No implementar ninguna alternativa, ni siquiera la recomendada.
 - No convertirlos en regla, código, migración, enum ni contrato OpenAPI.

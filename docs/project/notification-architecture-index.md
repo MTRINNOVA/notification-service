@@ -6,7 +6,7 @@
 
 ### Decisiones
 
-- [DECISIONS-v1.5.md](DECISIONS-v1.5.md): decisiones aprobadas de producto y técnicas (incluye PD-01..PD-08, TP-02, TP-15..TP-22 y PostgreSQL 17).
+- [DECISIONS-v1.5.md](DECISIONS-v1.5.md): decisiones aprobadas de producto y técnicas (incluye PD-01..PD-08, TP-02, TP-05..TP-07, TP-15..TP-22, TP-28, TP-33..TP-40, TP-43..TP-53 y PostgreSQL 17).
 - ADR vigentes:
   - [ADR-0001](../adr/0001-architecture.md): Clean + Hexagonal
   - [ADR-0002](../adr/0002-repositories.md): repositorios separados
@@ -27,6 +27,7 @@
 - [endpoint-inventory.md](../api/endpoint-inventory.md): resumen derivado de OpenAPI.
 - [api-design.md](../api/api-design.md): criterios de diseño; no define rutas.
 - [error-codes.md](../api/error-codes.md): catálogo cerrado de códigos de error.
+- [admin-panel-auth-contract.md](../api/admin-panel-auth-contract.md): contrato de autenticación, cookie y CSRF que consume `notification-admin` (TP-37, TP-38).
 
 ### Arquitectura y datos
 
@@ -55,11 +56,12 @@
 - [super-admin-bootstrap.md](../operations/super-admin-bootstrap.md): bootstrap y recuperación de `super_admin`.
 - [quotas-retention.md](../operations/quotas-retention.md)
 - [technical-readiness-v1.5.md](../operations/technical-readiness-v1.5.md)
-- Despliegue: [docker.md](../deployment/docker.md), [compose-topology.md](../deployment/compose-topology.md), [environment-decisions.md](../deployment/environment-decisions.md).
+- Despliegue: [docker.md](../deployment/docker.md), [compose-topology.md](../deployment/compose-topology.md), [environment-decisions.md](../deployment/environment-decisions.md), [health-checks.md](../deployment/health-checks.md) (Worker/Scheduler, TP-05), [ci-cd.md](../deployment/ci-cd.md) (GitHub Actions y GHCR, TP-07).
 
 ### Pruebas y aceptación
 
 - [integration-testing-postgresql.md](../testing/integration-testing-postgresql.md): Testcontainers con PostgreSQL 17.
+- [scheduler-tests.md](../testing/scheduler-tests.md): proyecto `Scheduler.Tests` y pruebas previstas (TP-06).
 - [criteria.md](../acceptance/criteria.md): criterios de aceptación.
 
 ## Históricos (solo trazabilidad)
@@ -71,6 +73,9 @@
   - [decision-closure-report.md](../operations/decision-closure-report.md)
   - [decision-closure-report-tp15-tp20.md](../operations/decision-closure-report-tp15-tp20.md)
   - [documentation-consolidation-report.md](../operations/documentation-consolidation-report.md)
+  - [decision-closure-report-tp28-tp37.md](../operations/decision-closure-report-tp28-tp37.md) (TP-05..TP-07, TP-28, TP-33..TP-37)
+  - [decision-closure-report-tp38-tp39.md](../operations/decision-closure-report-tp38-tp39.md) (TP-38, TP-39)
+  - [decision-closure-report-phase2-readiness.md](../operations/decision-closure-report-phase2-readiness.md) (preparación de la Fase 2: TP-40, TP-43..TP-53)
 
 ## Frontend (`notification-admin`, repositorio independiente)
 

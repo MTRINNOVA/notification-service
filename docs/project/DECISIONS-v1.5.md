@@ -30,6 +30,7 @@ Este documento registra la aceptación del usuario de las nueve recomendaciones 
 - Si no se indica, se utilizará el remitente predeterminado de la aplicación.
 - Si no existe un remitente predeterminado válido, la solicitud se rechazará con un error de negocio documentado.
 - No se permitirá asignar remitentes entre organizaciones distintas.
+- _(Precisado el 2026-11-15, TP-33):_ el remitente predeterminado pertenece a la **aplicación** (`application_senders.is_default`, `defaultSenderId`), con como máximo uno válido por aplicación y canal, validado en una transacción. No existe predeterminado propio del remitente ni predeterminado global por organización; se retiraron `whatsapp_senders.is_default` y `Sender.isDefault`.
 
 ## 4. SMS Gateway
 
@@ -78,6 +79,7 @@ Meta WhatsApp Cloud API queda expresamente fuera de la primera versión.
 - Las solicitudes rechazadas por validación no consumen cuota.
 - Una solicitud aceptada para procesamiento consume cuota.
 - Los reintentos técnicos del mismo mensaje no consumen cuota adicional.
+- _(Precisado el 2026-11-15, TP-44 y TP-45):_ una notificación programada consume cuota al ejecutarse, en el día local de ejecución; el límite de la organización vive en `organization_limits` y solo lo cambia `super_admin`.
 - Al superar el límite se responde HTTP 429 con código de error estable y datos de reintento cuando se conozcan.
 - Se podrán configurar límites menores por aplicación.
 - La cuota no constituye SLA ni garantía de entrega o throughput.
@@ -126,6 +128,52 @@ Aprobadas expresamente por el usuario. Precisan, sin sustituirlas, las decisione
 | TP-21 | Reenvío manual solicitado por la aplicación consumidora (API Key con scope `notifications.retry`); actor auditado `APPLICATION` | [ADR-0012](../adr/0012-delivery-semantics.md), [rbac-matrix.md](../security/rbac-matrix.md) |
 | TP-22 | `openapi.yaml` como fuente normativa única del contrato HTTP; `PATCH .../memberships/{membershipId}/status` incorporada; `PATCH /senders/{id}/default` descartada; esquemas sin uso eliminados | [api-design.md](../api/api-design.md), [openapi.yaml](../api/openapi.yaml) |
 
+
+## Decisiones técnicas TP-05 a TP-07, TP-28 y TP-33 a TP-37 (aprobadas el 2026-11-15)
+
+Aprobadas expresamente por el usuario y especificadas en la documentación. **No están implementadas:** el estado de implementación y validación de cada una está en [technical-pending-register.md](../operations/technical-pending-register.md).
+
+| ID    | Decisión | Documento normativo |
+| ----- | -------- | ------------------- |
+| TP-05 | Worker y Scheduler exponen `/health/live` y `/health/ready` por HTTP interno, consultados por Docker `HEALTHCHECK`/Portainer y no publicados por Traefik | [health-checks.md](../deployment/health-checks.md) |
+| TP-06 | `tests/NotificationService.Scheduler.Tests` se crea con la primera lógica funcional propia del Scheduler; no se crea vacío | [scheduler-tests.md](../testing/scheduler-tests.md) |
+| TP-07 | GitHub Actions con dos responsabilidades separadas: CI de Pull Requests y publicación controlada en GHCR (tags inmutables y digest). El despliegue automático al VPS queda fuera | [ci-cd.md](../deployment/ci-cd.md) |
+| TP-28 | `GET /public/attachments/{attachmentId}` exige el scope independiente `attachments.read`; la subida sigue con `attachments.upload` | [openapi.yaml](../api/openapi.yaml), [rbac-matrix.md](../security/rbac-matrix.md) |
+| TP-33 | Remitente predeterminado solo por aplicación; retirados `whatsapp_senders.is_default` y `Sender.isDefault` | [erd.md](../data/erd.md), [openapi.yaml](../api/openapi.yaml) |
+| TP-34 | Los esquemas `*Page` declaran como requeridos `items`, `page`, `pageSize` y `total` | [openapi.yaml](../api/openapi.yaml), [api-design.md](../api/api-design.md) |
+| TP-35 | Ninguna organización puede quedarse sin `organization_admin` activo (`422 LAST_ORGANIZATION_ADMIN_REQUIRED`); recuperación excepcional por `super_admin` | [ADR-0011](../adr/0011-admin-identity.md), [rbac-matrix.md](../security/rbac-matrix.md) |
+| TP-36 | `POST /management/notifications/{notificationId}/cancel` para usuarios autorizados, con el mismo caso de uso que la Public API | [openapi.yaml](../api/openapi.yaml), [api-design.md](../api/api-design.md) |
+| TP-37 | Refresh y logout declaran `RefreshCookie` (cookie `refresh`) y `CsrfHeader` (`X-CSRF-Token`) | [ADR-0011](../adr/0011-admin-identity.md), [openapi.yaml](../api/openapi.yaml) |
+
+## Decisiones técnicas TP-38 y TP-39 (aprobadas el 2026-11-15)
+
+Aprobadas expresamente por el usuario y especificadas en la documentación; **no implementadas** (estado en [technical-pending-register.md](../operations/technical-pending-register.md)).
+
+| ID    | Decisión | Documento normativo |
+| ----- | -------- | ------------------- |
+| TP-38 | Token CSRF sincronizado con la sesión: lo genera el backend con un generador criptográficamente seguro, se guarda como hash, lo devuelven login y refresh en `csrfToken`, el panel lo conserva en memoria y lo envía en `X-CSRF-Token`. Sin doble envío por cookie | [ADR-0011](../adr/0011-admin-identity.md), [openapi.yaml](../api/openapi.yaml), [admin-panel-auth-contract.md](../api/admin-panel-auth-contract.md) |
+| TP-39 | Cancelar una notificación ya `CANCELLED` → `409 RESOURCE_STATE_CONFLICT`, igual en la Public API y en la Management API; sin idempotencia con `200` | [openapi.yaml](../api/openapi.yaml), [api-design.md](../api/api-design.md) |
+
+## Decisiones de preparación de la Fase 2 (aprobadas el 2026-11-15)
+
+Aprobadas expresamente por el usuario para cerrar los huecos documentales que impedían iniciar la persistencia. **No están implementadas.** Evidencia: [decision-closure-report-phase2-readiness.md](../operations/decision-closure-report-phase2-readiness.md).
+
+| ID    | Decisión | Documento normativo |
+| ----- | -------- | ------------------- |
+| TP-40 | Parámetros del token CSRF: 32 bytes aleatorios, SHA-256 en `refresh_tokens.csrf_token_hash`, comparación en tiempo constante, `Origin` obligatorio en login/refresh/logout. El refresh token sigue el mismo criterio | [ADR-0011](../adr/0011-admin-identity.md), [erd.md](../data/erd.md) |
+| TP-43 | Lotes con aceptación **parcial**: `notification_batches`, `notifications.batch_id` y resultado por ítem en `AcceptedBatch.items` | [openapi.yaml](../api/openapi.yaml), [erd.md](../data/erd.md) |
+| TP-44 | La cuota de una notificación programada se reserva **al ejecutarse**, en el día local de ejecución; si falla, `FAILED` sin reprogramación automática | [erd.md](../data/erd.md), [quotas-retention.md](../operations/quotas-retention.md) |
+| TP-45 | Límites de organización en `organization_limits` por canal (WhatsApp 500/día por defecto); solo `super_admin` (`/platform/organizations/{organizationId}/limits`); efectivo = menor entre aplicación y organización | [openapi.yaml](../api/openapi.yaml), [erd.md](../data/erd.md) |
+| TP-46 | Alta de usuarios con contraseña temporal y cambio obligatorio (`must_change_password`, `changePassword`, `403 PASSWORD_CHANGE_REQUIRED`); `createMembership` solo vincula usuarios existentes | [ADR-0011](../adr/0011-admin-identity.md) |
+| TP-47 | Cifrado PGP (EMAIL) y ZIP AES-256 (EMAIL/WHATSAPP con adjuntos) en v1, heredado del sistema anterior; secreto ZIP cifrado fuera del dominio | [openapi.yaml](../api/openapi.yaml), [erd.md](../data/erd.md), [hexagonal.md](../architecture/hexagonal.md) |
+| TP-48 | `application_permissions` es el techo de scopes de las API Keys de la aplicación | [rbac-matrix.md](../security/rbac-matrix.md), [erd.md](../data/erd.md) |
+| TP-49 | `provider_accounts.is_default`: como máximo una cuenta predeterminada por organización y canal (Email/SMS) | [erd.md](../data/erd.md), [openapi.yaml](../api/openapi.yaml) |
+| TP-50 | Dominios cerrados de todas las columnas de estado | [erd.md](../data/erd.md) |
+| TP-51 | Catálogo cerrado de permisos de rol (`RolePermissionCode`) y asignaciones iniciales | [rbac-matrix.md](../security/rbac-matrix.md) |
+| TP-52 | Rotación de API Key: fila nueva y revocación de la anterior en la misma transacción, sin solape | [erd.md](../data/erd.md), [openapi.yaml](../api/openapi.yaml) |
+| TP-53 | Alineación ERD ↔ OpenAPI: `applicationId` en plantillas, campañas y programaciones; columnas que faltaban; retirada de `notifications.priority` | [erd.md](../data/erd.md), [openapi.yaml](../api/openapi.yaml) |
+
+**Fuera de v1** (revisión del sistema anterior `Notificaciones-master`, 2026-11-15): lista de supresión, registro de consentimiento (el opt-in es responsabilidad de la organización cliente), metadatos de origen normalizados (se usan los `metadata` libres) y prioridad de notificación. Detalle en [legacy-source-assessment.md](../providers/legacy-source-assessment.md).
 
 ## Base de datos (confirmada el 2026-11-15)
 

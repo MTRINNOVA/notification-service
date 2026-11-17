@@ -18,9 +18,9 @@ Ante cualquier discrepancia prevalece `openapi.yaml`, y la discrepancia se corri
 - UUID para identificadores internos; fechas RFC 3339 en UTC (`Z`).
 - `X-Correlation-Id` se acepta o se genera, y se devuelve en la respuesta.
 - `Idempotency-Key` obligatorio para crear envíos, lotes, campañas y programaciones, y para el reenvío manual.
-- API Keys de aplicaciones en `X-API-Key`; usuarios del panel con access JWT Bearer.
+- API Keys de aplicaciones en `X-API-Key`, con un scope por operación declarado en `x-required-scopes` (catálogo cerrado `ApiKeyScope`; [rbac-matrix.md](../security/rbac-matrix.md#scopes-de-api-key-public-api)). Usuarios del panel con access JWT Bearer. Solo `refresh` y `logout` se autentican con la cookie `refresh` más la cabecera `X-CSRF-Token` (TP-37, [ADR-0011](../adr/0011-admin-identity.md#sesión-del-panel-cookie-de-refresh-y-csrf-tp-37-aprobada-2026-11-15)). El token CSRF está sincronizado con la sesión y lo devuelven login y refresh en `csrfToken` (TP-38; contrato del panel en [admin-panel-auth-contract.md](admin-panel-auth-contract.md)).
 - El contexto de organización se deriva de las credenciales y la membresía. Un `organizationId` en ruta o cuerpo nunca sustituye a la autorización.
-- Paginación `page`/`pageSize` solo en colecciones; máximo 100; orden estable por fecha e ID. Las consultas de un recurso individual no se paginan.
+- Paginación `page`/`pageSize` solo en colecciones; máximo 100; orden estable por fecha e ID. Las consultas de un recurso individual no se paginan. Valores por defecto: `page = 1` y `pageSize = 25`. Toda respuesta paginada (`*Page`) declara como requeridos `items`, `page` (≥ 1), `pageSize` (1..100) y `total` (≥ 0). `total` es el número de resultados que coinciden con los filtros aplicados, antes de paginar (TP-34).
 - Errores RFC 9457 `application/problem+json` con `type`, `title`, `status`, `detail`, `instance`, `code` y `traceId`; `errors` y `retryAt` cuando correspondan.
 - `202 Accepted` confirma persistencia y aceptación, no envío ni entrega.
 - Archivos mediante `multipart/form-data`; respuesta JSON con `attachmentId`.
@@ -48,11 +48,26 @@ Operaciones concretas: [openapi.yaml](openapi.yaml) y su resumen en [endpoint-in
 ## Reglas de creación de notificaciones
 
 - Debe especificarse exactamente una modalidad de contenido: plantilla o contenido directo, según el canal.
-- Para WhatsApp se resuelve el `senderId` explícito o el remitente predeterminado de la aplicación, que se fija con `defaultSenderId` en la asignación de remitentes de la aplicación. Sin predeterminado válido → `422 DEFAULT_SENDER_NOT_CONFIGURED`.
+- Para WhatsApp se resuelve el `senderId` explícito o el remitente predeterminado de la aplicación, que se fija con `defaultSenderId` en la asignación de remitentes de la aplicación. Sin predeterminado válido → `422 DEFAULT_SENDER_NOT_CONFIGURED`. El predeterminado es **siempre por aplicación** (`application_senders.is_default`): el remitente no tiene un atributo de predeterminado propio y no existe un predeterminado global por organización (TP-33).
 - El remitente debe estar activo y asignado a la aplicación (`422 SENDER_NOT_CONNECTED` / `422 SENDER_NOT_ASSIGNED_TO_APPLICATION`). Un remitente de otra organización → `404`.
 - La cuota WhatsApp se reserva en la transacción de aceptación. Al superarla → `429 WHATSAPP_DAILY_QUOTA_EXCEEDED` con `Retry-After` y `retryAt`.
 - La misma `Idempotency-Key` con el mismo hash devuelve el recurso original; con un cuerpo distinto → `409 IDEMPOTENCY_KEY_CONFLICT`.
 - `attachmentIds[]`: adjuntos de la misma aplicación, asociados mediante `notification_attachments` sin duplicar el archivo. Un adjunto eliminado, expirado o bloqueado por el escaneo → `422 ATTACHMENT_NOT_AVAILABLE`; de otra aplicación u organización → `404` (TP-18).
+
+## Lotes, programación, cifrado y metadatos
+
+- **Lotes (TP-43):** `POST /public/notifications/bulk` acepta los ítems de forma **parcial**. Cada ítem se valida y acepta por separado; los rechazados se informan en `AcceptedBatch.items` con el `code` que tendrían en un envío individual. La respuesta es `202` aunque se rechacen todos (`status = REJECTED`). Solo hay errores del lote completo por formato (`400`), idempotencia (`409`) o rate limit (`429 RATE_LIMIT_EXCEEDED`). El lote se persiste y es idempotente.
+- **Programación (TP-44):** se valida al aceptar (`scheduledAt` o `createScheduledNotification`), pero la cuota diaria se reserva **al ejecutarse**, en el día local de ejecución de la organización. Una ejecución que falla deja la programación en `FAILED` con `failureCode` y no se reprograma automáticamente.
+- **Cifrado (TP-47):** `security.encryption` admite `NONE` (por defecto, en todos los canales), `TLS_ONLY` (EMAIL), `ZIP_AES256` (EMAIL y WHATSAPP, solo con adjuntos y `zipPassword`) y `PGP` (EMAIL, con `pgpPublicKey`). SMS solo admite `NONE`. Una combinación no válida → `422 ENCRYPTION_OPTIONS_INVALID`. El cifrado lo aplica el servicio, no el proveedor; `zipPassword` nunca se devuelve, registra ni publica en mensajes.
+- **Metadatos:** `metadata` es un mapa libre del cliente que se persiste tal cual. No se usa para autorización ni debe contener secretos.
+- **Recursos de Management con aplicación (TP-53):** `createTemplate`, `createCampaign` y `createScheduledNotification` exigen `applicationId`, que debe pertenecer a la organización seleccionada (si no, `404`). No es fuente de autoridad: solo identifica el recurso dentro del tenant ya autorizado.
+
+## Límites y API Keys
+
+- **Límites de organización (TP-45):** `GET/PUT /platform/organizations/{organizationId}/limits`, solo `super_admin`, con motivo auditado. WhatsApp parte de 500 por día. El límite efectivo de una aplicación es el menor entre el suyo y el de su organización.
+- **Permisos de aplicación (TP-48):** `setApplicationPermissions` fija el techo de scopes. Crear una API Key con un scope fuera de él → `422 API_KEY_SCOPE_NOT_PERMITTED`.
+- **Rotación (TP-52):** `rotateApiKey` crea una clave nueva (nuevo `id`) y revoca la anterior en la misma transacción, sin solape.
+- **Cuenta de proveedor predeterminada (TP-49):** como máximo una por organización y canal (`isDefault`). Se usa en Email y SMS.
 
 ## Reintento técnico, reenvío manual y conciliación
 
@@ -61,10 +76,35 @@ Semántica normativa en [ADR-0012](../adr/0012-delivery-semantics.md) (TP-19, TP
 - **Reintento técnico y conciliación:** son internos. No se exponen como operaciones ni consumen cuota.
 - **Reenvío manual:** `POST /public/notifications/{notificationId}/retry`. Lo solicita la **aplicación consumidora** con su API Key y el scope `notifications.retry`; el actor es la aplicación, nunca un usuario humano. Crea una nueva notificación vinculada (`resendOfNotificationId`), exige una `Idempotency-Key` nueva y un motivo, y consume cuota una vez. No existe operación de reenvío para usuarios del panel en v1.
 
+## Cancelación de notificaciones (TP-36)
+
+- Dos puntos de entrada y **un solo caso de uso**: `POST /public/notifications/{notificationId}/cancel` (aplicación, API Key con scope `notifications.cancel`) y `POST /management/notifications/{notificationId}/cancel` (usuario del panel, JWT). El endpoint solo traduce la autenticación al actor (`APPLICATION` o `USER`) y delega en el caso de uso, que aplica el tenant, las reglas de estado y la auditoría. No se duplica la lógica.
+- Autorización en Management: membresía activa en la organización seleccionada y permiso de rol `notifications.cancel` (`organization_admin`; `operator` solo si se le concede; `viewer` nunca). `super_admin` cancela en cualquier organización, con auditoría ([rbac-matrix.md](../security/rbac-matrix.md)).
+- Estados cancelables: entrega `PENDING`, `QUEUED` o `RETRY_PENDING` (público `ACCEPTED` o `QUEUED`), incluidas las notificaciones programadas que aún no se ejecutaron. La cancelación lleva la entrega a `CANCELLED` ([ADR-0012](../adr/0012-delivery-semantics.md)).
+- Una entrega que ya salió hacia el proveedor (`IN_PROGRESS` o posterior: `PROVIDER_ACCEPTED`, `RECONCILIATION_REQUIRED`, `DELIVERED`, `READ`, `FAILED`, `DEAD_LETTER`) **no** se cancela ni se reescribe como `CANCELLED`: se responde `409 NOTIFICATION_ALREADY_DISPATCHED`.
+- Resultados, **idénticos en ambas APIs** (TP-39):
+
+  | Situación | HTTP | `code` |
+  |---|---|---|
+  | Cancelación correcta | `200` | — (`ActionResult`) |
+  | Ya cancelada | `409` | `RESOURCE_STATE_CONFLICT` |
+  | Ya despachada | `409` | `NOTIFICATION_ALREADY_DISPATCHED` |
+  | Inexistente o fuera del ámbito autorizado | `404` | `RESOURCE_NOT_FOUND` |
+  | Sin permiso (rol en Management, scope en Public) | `403` | `PERMISSION_DENIED` |
+
+- La cancelación repetida **no** es idempotente: nunca responde `200`. Se mantiene la distinción entre "ya cancelada" y "ya despachada".
+
+## Adjuntos (TP-28)
+
+- `POST /public/attachments` exige `attachments.upload`; `GET /public/attachments/{attachmentId}` exige `attachments.read`. Son scopes independientes: subir no autoriza leer.
+- La lectura se limita a la organización y la aplicación propietarias del adjunto; un adjunto ajeno responde `404`.
+- `downloadUrl` es una URL firmada temporal (`expiresAt`) que no expone credenciales, endpoints internos, bucket ni clave de objeto de MinIO.
+
 ## Membresías y roles
 
 - Los roles de organización (`organization_admin`, `operator`, `viewer`) se asignan **siempre** a una membresía. No existe asignación de roles directamente a un usuario. El catálogo de roles es de solo lectura (TP-20).
 - El estado de una membresía (activa, suspendida, desactivada) controla el acceso del usuario a **esa** organización, sin afectar a sus otras membresías. El estado global del usuario (`PATCH /users/{id}/status`) afecta a todas sus organizaciones.
+- Una organización no puede quedarse sin un `organization_admin` activo: suspender o desactivar la última membresía administradora, retirarle el rol o suspender al usuario → `422 LAST_ORGANIZATION_ADMIN_REQUIRED`, con validación transaccional y bloqueo (TP-35, [ADR-0011](../adr/0011-admin-identity.md)).
 - `super_admin` es un privilegio de plataforma (`platform_role_assignments`), no un rol de membresía. El primero se crea por bootstrap ([super-admin-bootstrap.md](../operations/super-admin-bootstrap.md)); los siguientes, por la Platform API (TP-15).
 
 ## Diagnóstico de cuentas de proveedor

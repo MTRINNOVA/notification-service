@@ -22,7 +22,7 @@ Las pruebas de integración de persistencia usan **Testcontainers para .NET** co
 ## Requisitos de ejecución
 
 - **Local:** Docker Engine o Docker Desktop en ejecución, accesible para el usuario que lanza `dotnet test`. Sin Docker, las pruebas de integración fallan con un mensaje explícito; no se omiten en silencio.
-- **CI (futuro, TP-07):** runner con Docker disponible (p.ej. `ubuntu-latest` de GitHub Actions); misma imagen fijada que en local; caché de la imagen cuando sea viable; el job falla si Docker no está disponible.
+- **CI (TP-07 aprobado, workflows pendientes; [ci-cd.md](../deployment/ci-cd.md)):** runner con Docker disponible (p.ej. `ubuntu-latest` de GitHub Actions); misma imagen fijada que en local; caché de la imagen cuando sea viable; el job falla si Docker no está disponible.
 - Las pruebas unitarias y de arquitectura actuales **no** requieren Docker y deben poder ejecutarse sin él.
 
 ## Qué cubrirán (Fase 2 en adelante)
