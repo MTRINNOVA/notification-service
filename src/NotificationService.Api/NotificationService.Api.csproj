@@ -9,6 +9,10 @@
   <ItemGroup>
     <!-- Generación del documento OpenAPI 3.1 en tiempo de ejecución. -->
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <!-- Solo la interfaz Swagger UI; el generador de Swashbuckle no se usa. -->
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
   </ItemGroup>
