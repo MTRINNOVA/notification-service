@@ -1,0 +1,43 @@
+services:
+  notification-api:
+    image: ${NOTIFICATION_API_IMAGE:-ghcr.io/mtrinnova/notification-api:${NOTIFICATION_IMAGE_TAG:-dev}}
+    pull_policy: always
+    networks:
+      - notification_internal
+      - traefik
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK_NAME:-traefik}
+      traefik.http.routers.notification-api.rule: Host(`${NOTIFICATIONS_API_HOST}`)
+      traefik.http.routers.notification-api.entrypoints: websecure
+      traefik.http.routers.notification-api.tls: "true"
+      traefik.http.services.notification-api.loadbalancer.server.port: "8080"
+
+  notification-worker:
+    image: ${NOTIFICATION_WORKER_IMAGE:-ghcr.io/mtrinnova/notification-worker:${NOTIFICATION_IMAGE_TAG:-dev}}
+    pull_policy: always
+
+  notification-scheduler:
+    image: ${NOTIFICATION_SCHEDULER_IMAGE:-ghcr.io/mtrinnova/notification-scheduler:${NOTIFICATION_IMAGE_TAG:-dev}}
+    pull_policy: always
+
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:17.12-alpine3.24}
+    ports: []
+
+  rabbitmq:
+    image: ${RABBITMQ_IMAGE:-rabbitmq:4.4.1-management-alpine}
+    ports: []
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7.4.12-alpine}
+    ports: []
+
+  minio:
+    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2025-10-15T17-29-55Z}
+    ports: []
+
+networks:
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK_NAME:-traefik}

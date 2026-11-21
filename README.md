@@ -2,7 +2,7 @@
 
 Backend de la plataforma de notificaciones multi-organización y multi-aplicación (WhatsApp, Email, SMS). Sigue Clean Architecture + Hexagonal Architecture y las decisiones documentadas en [docs/](docs/). El frontend (`notification-admin`) vive en otro repositorio.
 
-> **Estado actual:** fundación técnica saneada. **No hay funcionalidad de negocio**: sin entidades, persistencia, autenticación, mensajería, proveedores ni endpoints funcionales. Ver [repository-sanitization-report.md](docs/history/repository-sanitization-report.md). Cada fase de desarrollo se inicia solo con autorización expresa ([AGENTS.md](AGENTS.md) §18).
+> **Estado actual:** la Fase 2 de persistencia está implementada (entidades, `DbContext`, configuraciones EF Core, migraciones y repositorios). Esta tarea mantiene ese estado y añade configuración Docker Compose para operación local y despliegue en VPS, sin iniciar nuevas fases funcionales.
 
 Instrucciones para agentes de desarrollo: [AGENTS.md](AGENTS.md) (y [CLAUDE.md](CLAUDE.md) para Claude Code).
 
@@ -25,8 +25,8 @@ Detalle y reglas de dependencia: [docs/architecture/project-structure.md](docs/a
 ## Requisitos
 
 - .NET SDK **10.0.404** (fijado en [global.json](global.json), `rollForward: latestPatch`).
-- Docker (opcional; solo para construir imágenes).
-- PostgreSQL solo será necesario a partir de la Fase 2. Hoy ningún endpoint abre conexiones, pero la cadena de conexión es **obligatoria** y se valida al arrancar.
+- Docker Engine + Docker Compose plugin.
+- PostgreSQL es requerido por Api/Worker/Scheduler; la cadena de conexión es **obligatoria** y se valida al arrancar.
 
 Las versiones de los paquetes NuGet se gestionan de forma centralizada en [Directory.Packages.props](Directory.Packages.props) (EF Core 10.0.15, Npgsql.EntityFrameworkCore.PostgreSQL 10.0.3).
 
@@ -45,7 +45,21 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Po
 
 Alternativa: variables de entorno (ver [.env.example](.env.example), que solo contiene placeholders). Nunca versionar `.env` ni secretos reales.
 
-## Comandos
+Inicializar `.env` local:
+
+```bash
+cp .env.example .env
+```
+
+PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+`.env` está ignorado por Git. En producción, usar secretos de Docker/Portainer (o equivalente), no el `.env` local.
+
+## Comandos .NET
 
 ```bash
 dotnet restore NotificationService.sln
@@ -57,7 +71,7 @@ dotnet list NotificationService.sln package --outdated
 dotnet list NotificationService.sln package --vulnerable --include-transitive
 ```
 
-Las pruebas actuales (unitarias, de composición y de arquitectura) no requieren Docker. A partir de la Fase 2, las pruebas de integración de persistencia usarán **Testcontainers con PostgreSQL 17** y necesitarán Docker en ejecución ([integration-testing-postgresql.md](docs/testing/integration-testing-postgresql.md)).
+Las pruebas incluyen cobertura de persistencia con PostgreSQL real (Testcontainers), por lo que Docker debe estar disponible para el conjunto completo.
 
 Ejecutar hosts (requieren la cadena de conexión configurada):
 
@@ -91,9 +105,94 @@ docker build -f src/NotificationService.Worker/Dockerfile -t notification-worker
 docker build -f src/NotificationService.Scheduler/Dockerfile -t notification-scheduler:dev .
 ```
 
-Worker y Scheduler expondrán `/health/live` y `/health/ready` internos (TP-05, aprobado; no implementado: [health-checks.md](docs/deployment/health-checks.md)). CI y publicación en GHCR con GitHub Actions están aprobadas pero sin workflows todavía (TP-07: [ci-cd.md](docs/deployment/ci-cd.md)).
+Worker y Scheduler no exponen endpoints HTTP de healthcheck en la implementación actual (TP-05 sigue pendiente). CI y publicación en GHCR con GitHub Actions están aprobadas pero sin workflows todavía (TP-07: [ci-cd.md](docs/deployment/ci-cd.md)).
 
-Aún no hay Docker Compose. Traefik es externo y nunca forma parte de este repositorio ([ADR-0010](docs/adr/0010-traefik.md)).
+Traefik es externo y nunca forma parte de este repositorio ([ADR-0010](docs/adr/0010-traefik.md)).
+
+### Compose
+
+Archivos:
+
+- `compose.yaml` (base)
+- `compose.dev.yaml` (desarrollo local, build desde Dockerfiles)
+- `compose.prod.yaml` (producción, imágenes GHCR)
+
+Validar configuración:
+
+```bash
+docker compose -f compose.yaml config
+docker compose -f compose.yaml -f compose.dev.yaml config
+docker compose -f compose.yaml -f compose.prod.yaml config
+```
+
+Levantar entorno completo en desarrollo:
+
+```bash
+docker compose -f compose.yaml -f compose.dev.yaml up -d
+```
+
+Levantar solo infraestructura (útil cuando ejecutas hosts desde el IDE):
+
+```bash
+docker compose -f compose.yaml -f compose.dev.yaml up -d postgres rabbitmq redis minio
+```
+
+Parar servicios sin eliminar volúmenes:
+
+```bash
+docker compose -f compose.yaml -f compose.dev.yaml down
+```
+
+Ver logs:
+
+```bash
+docker compose -f compose.yaml -f compose.dev.yaml logs -f notification-api
+docker compose -f compose.yaml -f compose.dev.yaml logs -f notification-worker
+docker compose -f compose.yaml -f compose.dev.yaml logs -f notification-scheduler
+```
+
+Despliegue en VPS (sin build local):
+
+```bash
+docker compose -f compose.yaml -f compose.prod.yaml pull
+docker compose -f compose.yaml -f compose.prod.yaml up -d
+```
+
+Notas operativas:
+
+- No publicar puertos de PostgreSQL/RabbitMQ/Redis/MinIO en producción.
+- Ejecutar migraciones EF Core como tarea controlada de release, nunca automáticamente por réplica.
+- No usar `docker compose down -v` en entornos con datos que deban preservarse.
+
+### Backups y restauración
+
+- PostgreSQL: backup lógico (`pg_dump`) y restauración (`pg_restore`/`psql`) como proceso de release.
+- MinIO: respaldo del volumen de objetos + validación de restauración.
+- RabbitMQ: respaldo de definiciones y datos de colas si aplica a tu RPO/RTO.
+- Redis: confirmar si AOF/RDB forma parte de la estrategia de recuperación o se trata como caché reconstruible.
+
+Ejemplo de backup lógico PostgreSQL (desde el contenedor):
+
+```bash
+docker compose -f compose.yaml -f compose.dev.yaml exec -T postgres \
+  pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" > backup-notification-service.sql
+```
+
+Ejemplo de restauración PostgreSQL:
+
+```bash
+cat backup-notification-service.sql | docker compose -f compose.yaml -f compose.dev.yaml exec -T postgres \
+  psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+```
+
+Ejemplo de backup de datos MinIO (tar del volumen montado):
+
+```bash
+docker run --rm \
+  -v notification_minio_data:/data:ro \
+  -v "$PWD":/backup \
+  alpine:3.22 sh -c 'tar czf /backup/minio-data-backup.tgz -C /data .'
+```
 
 ## Decisiones y pendientes
 

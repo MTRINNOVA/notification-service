@@ -1,0 +1,45 @@
+services:
+  notification-api:
+    build:
+      context: .
+      dockerfile: src/NotificationService.Api/Dockerfile
+    image: ${NOTIFICATION_API_IMAGE_DEV:-notification-api:dev}
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT_DEV:-Development}
+      OpenApi__Enabled: ${OpenApi__Enabled_DEV:-true}
+    ports:
+      - 127.0.0.1:${API_HTTP_PORT:-8080}:8080
+
+  notification-worker:
+    build:
+      context: .
+      dockerfile: src/NotificationService.Worker/Dockerfile
+    image: ${NOTIFICATION_WORKER_IMAGE_DEV:-notification-worker:dev}
+    environment:
+      DOTNET_ENVIRONMENT: ${DOTNET_ENVIRONMENT_DEV:-Development}
+
+  notification-scheduler:
+    build:
+      context: .
+      dockerfile: src/NotificationService.Scheduler/Dockerfile
+    image: ${NOTIFICATION_SCHEDULER_IMAGE_DEV:-notification-scheduler:dev}
+    environment:
+      DOTNET_ENVIRONMENT: ${DOTNET_ENVIRONMENT_DEV:-Development}
+
+  postgres:
+    ports:
+      - 127.0.0.1:${POSTGRES_PORT:-5432}:5432
+
+  rabbitmq:
+    ports:
+      - 127.0.0.1:${RABBITMQ_PORT:-5672}:5672
+      - 127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672
+
+  redis:
+    ports:
+      - 127.0.0.1:${REDIS_PORT:-6379}:6379
+
+  minio:
+    ports:
+      - 127.0.0.1:${MINIO_API_PORT:-9000}:9000
+      - 127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001
